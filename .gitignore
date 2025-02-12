@@ -1,6 +1,9 @@
 # Data
 data/
 *.nc
+*.hdf
+*.log
+*.out
 
 # Figures
 *.png
