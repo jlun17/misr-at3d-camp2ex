@@ -12,7 +12,7 @@ import os
 from collections import OrderedDict
 from util import load_measurements
 
-# Defin output files
+# Define output files
 expr_title = 'dev00'
 iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/dev/{}/iterations/'.format(expr_title)
 os.makedirs(iter_dir, exist_ok=False)
@@ -29,6 +29,10 @@ mie_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/mie_tables/'
 
 rte_grid = xr.load_dataset(rte_grid_file)
 obs = load_measurements(obs_file)
+
+# add sensor uncertainty model
+uncertainty = at3d.uncertainties.RadiometricNoiseUncertainty(1e-6, 1e-3)
+obs.add_uncertainty_model('MISR', uncertainty)
 
 forward_sensors = obs.make_forward_sensors()
 wavelength = forward_sensors.get_unique_solvers()[0]
