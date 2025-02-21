@@ -32,7 +32,7 @@ cvm_title = '{}_RTG_{}_SC_{}_LCL0p400'.format(region_title, rte_grid_title, sc_t
 cloud_volume_mask_file = '{}CVM_{}.nc'.format(data_dir, cvm_title)
 
 # Define output files
-iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/dev/{}/iterations/'.format(expr_title)
+iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/{}/iterations/'.format(expr_title)
 os.makedirs(iter_dir, exist_ok=False)
 
 # Mie table directory
