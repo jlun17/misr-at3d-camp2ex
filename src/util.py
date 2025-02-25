@@ -4,7 +4,7 @@ import at3d
 import netCDF4 as nc
 import xarray as xr
 
-def save_measurements(file_name, sensors):
+def save_sensor_dict(file_name, sensors):
     """
     Method to save only a Sensor Dict object. Useful for preparing real 
     satellite observations to be used in a retreival. Adapted from 
@@ -43,7 +43,7 @@ def save_measurements(file_name, sensors):
         for j, image in enumerate(sensor['sensor_list']):
             image.to_netcdf(file_name, 'a', group='sensors/{}/{:d}'.format(key, j))
 
-def load_measurements(file_name):
+def load_sensor_dict(file_name):
     """
     Load from netCDF the sensors that were saved using 'save_forward_model'
     above. Adapted from at3d.util.load_forward_model.

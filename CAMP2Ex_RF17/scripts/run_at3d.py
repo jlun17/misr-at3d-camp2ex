@@ -10,7 +10,7 @@ import at3d
 import netCDF4 as nc
 import os
 from collections import OrderedDict
-from util import load_measurements
+from util import load_sensor_dict
 
 ## INPUT
 obs_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_Pris_RTG_default.nc'
@@ -33,7 +33,7 @@ os.makedirs(iter_dir, exist_ok=False)
 mie_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/mie_tables/'
 
 rte_grid = xr.load_dataset(rte_grid_file)
-obs = load_measurements(obs_file)
+obs = load_sensor_dict(obs_file)
 
 # add sensor uncertainty model
 uncertainty = at3d.uncertainties.RadiometricNoiseUncertainty(1e-6, 1e-3)
