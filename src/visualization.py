@@ -228,3 +228,25 @@ def extinction_cross_section_frames(iter_dir, out_dir, dim='x', loc=1, vmin=None
         plt.suptitle(sup_title)
         fig.savefig('{}{}.png'.format(out_dir, sup_title))
         plt.close(fig)
+
+def CAMP2Ex_insitu_compare(cloud, p3, f, ax, thresh=0):
+    pristine = p3.aerosols.data == 0
+    trans = p3.aerosols.data == 1
+    polluted = p3.aerosols.data == 2
+
+    prist_color = 'tab:green'
+    trans_color = 'tab:gray'
+    poll_color = 'tab:brown'
+    
+    cond = cloud.ext_ravel.data > thresh
+    ax.scatter(cloud.ext_ravel.data[cond], cloud.Z.data[cond]*1000)
+
+    ax.scatter(p3.ext_km.data[pristine], p3.GPS_Altitude[pristine], c=prist_color, label='pristine')
+    ax.scatter(p3.ext_km.data[trans], p3.GPS_Altitude[trans], c=trans_color, label='trans')
+    ax.scatter(p3.ext_km.data[polluted], p3.GPS_Altitude[polluted], c=poll_color, label='polluted')
+
+    ax.set_xlabel('Extinction (1/km)')
+    ax.set_ylabel('Altitude (m)')
+    ax.grid()
+    ax.legend()
+    ax.set_xscale('log')
