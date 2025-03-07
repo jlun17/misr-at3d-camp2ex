@@ -238,8 +238,17 @@ def CAMP2Ex_insitu_compare(cloud, p3, f, ax, thresh=0):
     trans_color = 'tab:gray'
     poll_color = 'tab:brown'
     
-    cond = cloud.ext_ravel.data > thresh
-    ax.scatter(cloud.ext_ravel.data[cond], cloud.Z.data[cond]*1000)
+    cloud_cond = cloud.ext_ravel.data > thresh
+    ext_cloud = cloud.ext_ravel.data[cloud_cond]
+    z_cloud = cloud.Z.data[cloud_cond]
+    ax.scatter(ext_cloud, z_cloud*1000)
+
+    positions = []
+    ext_box = []
+    for z in cloud.z.data:
+        ext_box.append(ext_cloud[z_cloud == z])
+        positions.append(int(z*1000))
+    ax.boxplot(ext_box, positions=positions, widths=80, vert=False, manage_ticks=False)
 
     ax.scatter(p3.ext_km.data[pristine], p3.GPS_Altitude[pristine], c=prist_color, label='pristine')
     ax.scatter(p3.ext_km.data[trans], p3.GPS_Altitude[trans], c=trans_color, label='trans')
