@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=CVM_no
+#SBATCH --job-name=mix22
 #SBATCH -p node
 #SBATCH -n 4
 #SBATCH --mem 64GB
@@ -12,4 +12,4 @@
 
 source ~/miniconda3/bin/activate at3d_pure
 
-python /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/scripts/run_at3d.py > /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/default_location/CVM_none/CVM_none.log
+python /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/scripts/run_at3d.py > /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/default_location/aerosol/mix22/mix22.log

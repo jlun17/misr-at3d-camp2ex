@@ -29,7 +29,7 @@ import xarray as xr
 import numpy as np
 import at3d
 
-def get_MISR_mixture_optical_properties(band, mixture, aod, rte_grid, acp_file, legendre_order=12, g_tol=1e-3):
+def get_MISR_mixture_optical_properties(band, mixture, aod, rte_grid, acp_file, legendre_order=12, g_tol=1e-3, res_tol=1):
     # Read in MISR aerosol data
     acp_all = xr.load_dataset(acp_file)
     acp = acp_all.sel(mixture=mixture, band=band, method='nearest').copy(deep=True)
@@ -41,7 +41,8 @@ def get_MISR_mixture_optical_properties(band, mixture, aod, rte_grid, acp_file, 
 
     legendre_coeffs_P11 /= legendre_coeffs_P11[0] # normalization
 
-    assert np.abs(legendre_coeffs_P11[1]/3 - acp.g.data) < g_tol, 'Asymmetry tolerance not met. Expected g = {:f} and got g = {:f}'.format(acp.g.data, legendre_coeffs_P11[1]/3)
+    assert np.abs(leg_quality[0]) <= res_tol, 'Residual tolerance not met. Residual: {:f}'.format(leg_quality[0][0])
+    assert np.abs(legendre_coeffs_P11[1]/3 - acp.g.data) <= g_tol, 'Asymmetry tolerance not met. Expected g = {:f} and got g = {:f}'.format(acp.g.data, legendre_coeffs_P11[1]/3)
 
     StokesIndex = 6
     legendreIndex = legendre_order + 1
