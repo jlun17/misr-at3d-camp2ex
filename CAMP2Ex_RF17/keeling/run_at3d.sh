@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=mix54
+#SBATCH --job-name=0p150
 #SBATCH -p node
 #SBATCH -n 4
 #SBATCH --mem 64GB
@@ -12,4 +12,4 @@
 
 source ~/miniconda3/bin/activate at3d_pure
 
-python /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/scripts/run_at3d.py > /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/default_location/aerosol/mix54/mix54.log
+python /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/scripts/run_at3d.py > /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/default_location/aerosol/0p150/0p150.log
