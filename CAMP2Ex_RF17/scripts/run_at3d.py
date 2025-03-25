@@ -25,6 +25,7 @@ b = 2.623 # um
 
 ## OUTPUT
 iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/default_location/aerosol/0p250/iterations/'
+supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/default_location/aerosol/0p250/loss.csv'
 
 # Define output files
 os.makedirs(iter_dir, exist_ok=False)
@@ -163,8 +164,13 @@ def save(optimizer):
     else:
         outFile = '{}iter{:03d}.nc'.format(iter_dir, optimizer.iteration)
     at3d.util.save_forward_model(outFile, forward_sensors, solvers)
+    with open(supp_file, mode='a') as file:
+        file.write('{}, {}, {}\n'.format(optimizer.iteration, optimizer.objective_fn.loss, optimizer.objective_fn._total_obj_fn_time))
     return {'None': None}
 callback = at3d.callback.CallbackFn(save)
+
+with open(supp_file, mode='a') as file:
+    file.write('iteration, loss, total_obj_fn_time\n')
 
 optimizer = at3d.optimize.Optimizer(objective_function, callback_fn=callback)
 
