@@ -4,6 +4,7 @@ data/
 *.hdf
 *.log
 *.out
+*.csv
 
 # Figures
 *.png
