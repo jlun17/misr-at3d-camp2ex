@@ -10,6 +10,7 @@ import glob
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import imageio.v2 as imageio
+import plotly.graph_objects as go
 
 from util import load_sensor_dict
 
@@ -138,7 +139,7 @@ def plot_measurements(filename, instrument, fig, ax, s=2, vmin=None, vmax=None, 
         c = ax[i].scatter(cam.ray_x.data, cam.ray_y.data, s=s, c=cam.I.data*np.pi/cam.mu0, marker='s', cmap='gray', vmin=vmin, vmax=vmax)
         if(set_title):
             ax[i].set_title(title)
-    return c
+    return fig, ax
 
 def at3d_obs_frames(filename, instrument, out_dir, s=2, vmin=None, vmax=None):
     sensor_dict = load_sensor_dict(filename)
@@ -207,6 +208,42 @@ def optical_depth_frames(iter_dir, out_dir, vmin=None, vmax=None, log=True):
         fig.savefig('{}{}.png'.format(out_dir, title))
         plt.close(fig)
 
+def extinction3D_frames(iter_dir, out_dir, title=True, frames=[0], vmin=0, vmax=43, opacity=0.1, sfc_cnt=17, theta=35, phi=5.4, r=2.5):
+    os.makedirs(out_dir, exist_ok=True)
+    iter_files = np.sort(glob.glob(iter_dir + 'iter*.nc'))
+    theta = np.radians(theta)
+    h = r * np.sin(theta)
+    camera = dict(
+        up=dict(x=0, y=0, z=1.0),
+        center=dict(x=0.0, y=0.0, z=0.0),
+        eye=dict(x=h*np.cos(phi), y=h*np.sin(phi), z=r*np.cos(theta))
+    )
+    pad = {'b':0, 'l':0, 'r':0, 't':0, 'pad':0}
+    font = {'size':18}
+    scene = dict(
+        xaxis=dict(title='x (km)', tickvals=[0, 17.6], range=[-1, 18.6]),
+        yaxis=dict(title='y (km)', tickvals=[0, 17.6], range=[-1, 18.6]),
+        zaxis=dict(title='z (km)', tickvals=[0, 1.4], range=[-0.1, 1.5]),
+    )
+    if (frames=='all'):
+        frames = np.arange(len(iter_files))
+    for i in frames:
+        sensors, solvers, rte_grid = at3d.util.load_forward_model(iter_files[i])
+        cloud = solvers[0.67].medium['cloud']
+        X, Y, Z = np.meshgrid(cloud.x.data, cloud.y.data, cloud.z.data, indexing='ij')
+        data = go.Volume(x=X.flatten(), y=Y.flatten(), z=Z.flatten(), 
+                            value=cloud.extinction.data.flatten(), isomin=vmin, isomax=vmax, 
+                            opacity=opacity, surface_count=sfc_cnt, showscale=False)
+        layout = go.Layout(autosize=False, width=750, height=650)
+        fig = go.Figure(data=data, layout=layout)
+        if(title):
+            sup_title = 'Iteration {}'.format(i)
+            annotations=[dict(text=sup_title, x=0.5, y=0.85, font={'size':24})]
+            fig.update_layout(scene_camera=camera, scene=scene, margin=pad, font=font, annotations=annotations)
+        else:
+            fig.update_layout(scene_camera=camera, scene=scene, margin=pad, font=font)
+        fig.write_image('{}iter{:03d}.png'.format(out_dir, i))
+
 def extinction_cross_section_frames(iter_dir, out_dir, dim='x', loc=1, vmin=None, vmax=None, log=True):
     # warnings.filterwarnings("ignore")
     os.makedirs(out_dir, exist_ok=True)
@@ -221,15 +258,16 @@ def extinction_cross_section_frames(iter_dir, out_dir, dim='x', loc=1, vmin=None
                 solvers[0.67].medium['cloud'].extinction.sel(y=loc, method='nearest').plot(y='z', ax=ax, norm=colors.LogNorm(), vmin=vmin, vmax=vmax)
         else:
             if(dim=='x'):
-                solvers[0.67].medium['cloud'].extinction.sel(x=log, method='nearest').plot(y='z', ax=ax, vmin=vmin, vmax=vmax)
+                solvers[0.67].medium['cloud'].extinction.sel(x=loc, method='nearest').plot(y='z', ax=ax, vmin=vmin, vmax=vmax)
             elif(dim=='y'):
-                solvers[0.67].medium['cloud'].extinction.sel(y=log, method='nearest').plot(y='z', ax=ax, vmin=vmin, vmax=vmax)
+                solvers[0.67].medium['cloud'].extinction.sel(y=loc, method='nearest').plot(y='z', ax=ax, vmin=vmin, vmax=vmax)
         sup_title = os.path.basename(iter_file).split('.')[0]
         plt.suptitle(sup_title)
         fig.savefig('{}{}.png'.format(out_dir, sup_title))
         plt.close(fig)
-
+    
 def CAMP2Ex_insitu_compare(cloud, p3, f, ax, thresh=0):
+    ax.grid()
     pristine = p3.aerosols.data == 0
     trans = p3.aerosols.data == 1
     polluted = p3.aerosols.data == 2
@@ -241,7 +279,7 @@ def CAMP2Ex_insitu_compare(cloud, p3, f, ax, thresh=0):
     cloud_cond = cloud.ext_ravel.data > thresh
     ext_cloud = cloud.ext_ravel.data[cloud_cond]
     z_cloud = cloud.Z.data[cloud_cond]
-    ax.scatter(ext_cloud, z_cloud*1000)
+    # ax.scatter(ext_cloud, z_cloud*1000)
 
     positions = []
     ext_box = []
@@ -250,12 +288,15 @@ def CAMP2Ex_insitu_compare(cloud, p3, f, ax, thresh=0):
         positions.append(int(z*1000))
     ax.boxplot(ext_box, positions=positions, widths=80, vert=False, manage_ticks=False)
 
-    ax.scatter(p3.ext_km.data[pristine], p3.GPS_Altitude[pristine], c=prist_color, label='pristine')
-    ax.scatter(p3.ext_km.data[trans], p3.GPS_Altitude[trans], c=trans_color, label='trans')
-    ax.scatter(p3.ext_km.data[polluted], p3.GPS_Altitude[polluted], c=poll_color, label='polluted')
+    # ax.scatter(p3.ext_km.data[pristine], p3.GPS_Altitude[pristine], c=prist_color, label='pristine')
+    # ax.scatter(p3.ext_km.data[trans], p3.GPS_Altitude[trans], c=trans_color, label='trans')
+    # ax.scatter(p3.ext_km.data[polluted], p3.GPS_Altitude[polluted], c=poll_color, label='polluted')
+    ax.scatter(p3.ext_km.data[pristine], p3.GPS_Altitude[pristine], c='tab:blue', s=16, label='NASA P3')
+    ax.scatter(p3.ext_km.data[trans], p3.GPS_Altitude[trans], c='tab:blue', s=16)
+    ax.scatter(p3.ext_km.data[polluted], p3.GPS_Altitude[polluted], c='tab:blue', s=16)
 
     ax.set_xlabel('Extinction (1/km)')
     ax.set_ylabel('Altitude (m)')
-    ax.grid()
-    ax.legend()
+    # ax.grid()
+    # ax.legend()
     ax.set_xscale('log')
