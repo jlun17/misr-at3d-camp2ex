@@ -24,8 +24,8 @@ a = 4.292 # um / km
 b = 2.623 # um
 
 ## OUTPUT
-iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V01/default/iterations/'
-supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V01/default/loss.csv'
+iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V01/default_980e4/iterations/'
+supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V01/default_980e4/loss.csv'
 
 # Define output files
 os.makedirs(iter_dir, exist_ok=False)
@@ -37,7 +37,7 @@ rte_grid = xr.load_dataset(rte_grid_file)
 obs = load_sensor_dict(obs_file)
 
 # add sensor uncertainty model
-sf = 980e3
+sf = 980e4
 inverse_covariance = sf * np.diag(np.ones(4))
 uncertainty = at3d.uncertainties.Uncertainty(inverse_covariance, 'L2')
 obs.add_uncertainty_model('MISR', uncertainty)
