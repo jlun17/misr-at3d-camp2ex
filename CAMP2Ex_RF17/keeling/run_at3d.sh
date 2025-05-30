@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=default980e4
+#SBATCH --job-name=default980e5
 #SBATCH -p node
 #SBATCH -n 4
 #SBATCH --mem 64GB
@@ -12,4 +12,4 @@
 
 source ~/miniconda3/bin/activate at3d_pure
 
-python /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/scripts/run_at3d.py > /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V01/default_980e4/at3d.log
+python /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/scripts/run_at3d.py > /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V01/default_980e5/at3d.log
