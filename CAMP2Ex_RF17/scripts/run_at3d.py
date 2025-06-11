@@ -15,9 +15,9 @@ from util import load_sensor_dict
 ## INPUT
 obs_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_default_1400.nc'
 rte_grid_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/RTG_1400.nc'
-background_scatterers_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/MIXTURE_default.nc'
-cloud_volume_mask_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/CVM_default_periodic.nc'
-config_file_name = '/data/keeling/a/johntl3/b/LundstromPub2025/configs/misr_config_periodic.json'
+background_scatterers_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/MIXTURE_default_0p150.nc'
+cloud_volume_mask_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/CVM_default_open.nc'
+config_file_name = '/data/keeling/a/johntl3/b/LundstromPub2025/configs/misr_config.json'
 surface_wind_speed = 0.67 # m/s
 # Reff(z) = a*z + b
 a = 4.292 # um / km
@@ -25,8 +25,8 @@ b = 2.623 # um
 error_cov_sf = 1e7
 
 ## OUTPUT
-iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/HBC/periodic/iterations/'
-supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/HBC/periodic/loss.csv'
+iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/aerosol/0p150/iterations/'
+supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/aerosol/0p150/loss.csv'
 
 # Define output files
 os.makedirs(iter_dir, exist_ok=False)
