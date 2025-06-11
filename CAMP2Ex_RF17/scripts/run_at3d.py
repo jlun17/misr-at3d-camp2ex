@@ -22,6 +22,7 @@ surface_wind_speed = 0.67 # m/s
 # Reff(z) = a*z + b
 a = 4.292 # um / km
 b = 2.623 # um
+error_cov_sf = 1e7
 
 ## OUTPUT
 iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V00/CVM/LCL_v2/iterations/'
@@ -37,8 +38,7 @@ rte_grid = xr.load_dataset(rte_grid_file)
 obs = load_sensor_dict(obs_file)
 
 # add sensor uncertainty model
-sf = 980e5
-inverse_covariance = sf * np.diag(np.ones(4))
+inverse_covariance = error_cov_sf * np.diag(np.ones(4))
 uncertainty = at3d.uncertainties.Uncertainty(inverse_covariance, 'L2')
 obs.add_uncertainty_model('MISR', uncertainty)
 
@@ -108,7 +108,7 @@ grid_to_optical_properties = at3d.medium.GridToOpticalProperties(
 )
 
 cloud_volume_mask = xr.load_dataset(cloud_volume_mask_file)['cloud_volume_mask'].data
-cloud_volume_mask[0,:,:] = cloud_volume_mask[-1,:,:] = cloud_volume_mask[:,0,:] = cloud_volume_mask[:,-1,:] = 0.0
+# cloud_volume_mask[0,:,:] = cloud_volume_mask[-1,:,:] = cloud_volume_mask[:,0,:] = cloud_volume_mask[:,-1,:] = 0.0
 extinction_coordinate_transform = None
 extinction_state2grid_transform = at3d.transforms.StateToGridMask(mask=cloud_volume_mask)
 extinction_transforms = (extinction_coordinate_transform, extinction_state2grid_transform)
