@@ -13,7 +13,7 @@ from collections import OrderedDict
 from util import load_sensor_dict
 
 ## INPUT
-obs_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_slow_cloud_motion_1400.nc'
+obs_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_fast_cloud_motion_1400.nc'
 rte_grid_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/RTG_1400.nc'
 background_scatterers_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/MIXTURE_default_mix54.nc'
 cloud_volume_mask_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/CVM_all_cloud_1400.nc'
@@ -25,8 +25,8 @@ b = 2.623 # um
 error_cov_sf = 1e7
 
 ## OUTPUT
-iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/cloud_motion/slow_unconstrained/iterations/'
-supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/cloud_motion/slow_unconstrained/loss.csv'
+iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/cloud_motion/fast_unconstrained/iterations/'
+supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/cloud_motion/fast_unconstrained/loss.csv'
 
 # Define output files
 os.makedirs(iter_dir, exist_ok=False)
