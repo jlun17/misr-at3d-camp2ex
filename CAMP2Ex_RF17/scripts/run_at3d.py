@@ -13,10 +13,10 @@ from collections import OrderedDict
 from util import load_sensor_dict
 
 ## INPUT
-obs_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_default_1400.nc'
+obs_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_fast_cloud_motion_1400.nc'
 rte_grid_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/RTG_1400.nc'
-background_scatterers_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/MIXTURE_default.nc'
-cloud_volume_mask_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/CVM_LCL.nc'
+background_scatterers_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/MIXTURE_default_mix54.nc'
+cloud_volume_mask_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/CVM_fast_open.nc'
 config_file_name = '/data/keeling/a/johntl3/b/LundstromPub2025/configs/misr_config.json'
 surface_wind_speed = 0.67 # m/s
 # Reff(z) = a*z + b
@@ -25,8 +25,8 @@ b = 2.623 # um
 error_cov_sf = 1e7
 
 ## OUTPUT
-iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V00/CVM/LCL_v2/iterations/'
-supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V00/CVM/LCL_v2/loss.csv'
+iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/cloud_motion/fast/iterations/'
+supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/cloud_motion/fast/loss.csv'
 
 # Define output files
 os.makedirs(iter_dir, exist_ok=False)
