@@ -11,34 +11,63 @@ import netCDF4 as nc
 import os
 from collections import OrderedDict
 from util import load_sensor_dict
+import yaml
 
-## INPUT
-obs_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_fast_cloud_motion_1400.nc'
-rte_grid_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/RTG_1400.nc'
-background_scatterers_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/MIXTURE_default_mix54.nc'
-cloud_volume_mask_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/CVM_fast_open.nc'
-config_file_name = '/data/keeling/a/johntl3/b/LundstromPub2025/configs/misr_config.json'
-surface_wind_speed = 0.67 # m/s
-# Reff(z) = a*z + b
-a = 4.292 # um / km
-b = 2.623 # um
-error_cov_sf = 1e7
+if(len(sys.argv) > 1):
+    config = yaml.load(sys.argv[1])
+else:
+    config = {}
 
-## OUTPUT
-iter_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/cloud_motion/fast/iterations/'
-supp_file = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/cloud_motion/fast/loss.csv'
+    ## INPUT
+    config['obs_file'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_default_1400.nc'
+    config['rte_grid_file'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/RTG_1400.nc'
+    config['background_scatterers_file'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/MIXTURE_default.nc'
+    config['cloud_volume_mask_file'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/CVM_default_open.nc'
+    config['config_file_name'] = '/data/keeling/a/johntl3/b/LundstromPub2025/configs/misr_config.json'
+    config['surface_wind_speed'] = 0.67 # m/s
+    # Reff(z) = a*z + b
+    config['a'] = 4.292 # um / km
+    config['b'] = 2.623 # um
+    config['error_cov_sf'] = 1e7
+
+    ## Restart From
+    config['restart_iter'] = None
+
+    ## OUTPUT
+    config['out_path'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/default/'
+
+assert 'obs_file' in config, 'obs_file not in config'
+assert 'rte_grid_file' in config, 'rte_grid_file not in config'
+assert 'background_scatterers_file' in config, 'background_scatterers_file not in config'
+assert 'cloud_volume_mask_file' in config, 'cloud_volume_mask_file not in config'
+assert 'config_file_name' in config, 'config_file_name not in config'
+assert 'surface_wind_speed' in config, 'surface_wind_speed not in config'
+assert 'a' in config, 'a not in config'
+assert 'b' in config, 'b not in config'
+assert 'error_cov_sf' in config, 'error_cov_sf not in config'
+assert 'restart_iter' in config, 'restart_iter not in config'
+assert 'out_path' in config, 'out_path not in config'
+
+iter_dir = '{}iterations/'.format(config['out_path'])
+supp_file = '{}loss.csv'.format(config['out_path'])
 
 # Define output files
-os.makedirs(iter_dir, exist_ok=False)
+os.makedirs(iter_dir, exist_ok=True)
+assert len(os.listdir(iter_dir)) == 0, "Iterations already saved in {}.\nSpecify a new output location.".format(iter_dir)
+
+# Save config
+if(len(sys.argv) == 1):
+    with open('{}config.yml'.format(config['out_path']), 'w') as file:
+        yaml.dump(config, file, sort_keys=False)
 
 # Mie table directory
 mie_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/mie_tables/'
 
-rte_grid = xr.load_dataset(rte_grid_file)
-obs = load_sensor_dict(obs_file)
+rte_grid = xr.load_dataset(config['rte_grid_file'])
+obs = load_sensor_dict(config['obs_file'])
 
 # add sensor uncertainty model
-inverse_covariance = error_cov_sf * np.diag(np.ones(4))
+inverse_covariance = config['error_cov_sf'] * np.diag(np.ones(4))
 uncertainty = at3d.uncertainties.Uncertainty(inverse_covariance, 'L2')
 obs.add_uncertainty_model('MISR', uncertainty)
 
@@ -49,10 +78,10 @@ wavelength = forward_sensors.get_unique_solvers()[0]
 # see ./ancillary/CAMP2Ex_RF17_ERA5_Surface.ipynb
 surfaces = OrderedDict()
 m_water = 1.33197 - 1j*2.41e-8
-surfaces[wavelength] = at3d.surface.wave_fresnel(np.real(m_water), np.imag(m_water), surface_wind_speed)
+surfaces[wavelength] = at3d.surface.wave_fresnel(np.real(m_water), np.imag(m_water), config['surface_wind_speed'])
 
 numerical_parameters = OrderedDict()
-numerical_parameters[wavelength] = at3d.configuration.get_config(config_file_name)
+numerical_parameters[wavelength] = at3d.configuration.get_config(config['config_file_name'])
 
 sources = OrderedDict()
 sources[wavelength] = at3d.source.solar(
@@ -64,7 +93,7 @@ sources[wavelength] = at3d.source.solar(
 )
 
 background_optical_scatterers = OrderedDict()
-background_properties = xr.load_dataset(background_scatterers_file)
+background_properties = xr.load_dataset(config['background_scatterers_file'])
 background_optical_scatterers[wavelength] = {}
 background_optical_scatterers[wavelength]['background'] = background_properties
 
@@ -94,7 +123,7 @@ cloud_optical_prop_gen = at3d.medium.OpticalPropertyGenerator(
 
 cloud = rte_grid.copy(deep=True)
 cloud['density'] = (['x','y','z'], np.zeros((rte_grid.dims['x'], rte_grid.dims['y'], rte_grid.dims['z'])))
-reff_profile = a * rte_grid.z.data + b
+reff_profile = config['a'] * rte_grid.z.data + config['b']
 reff = np.tile(reff_profile, (rte_grid.dims['x'], rte_grid.dims['y'], 1))
 cloud['reff'] = (['x','y','z'], reff)
 cloud['veff'] = (['x','y','z'], np.ones(cloud.density.shape) * 0.1)
@@ -107,7 +136,7 @@ grid_to_optical_properties = at3d.medium.GridToOpticalProperties(
     fixed_dataset=cloud_optical_properties[wavelength].drop_vars('extinction')
 )
 
-cloud_volume_mask = xr.load_dataset(cloud_volume_mask_file)['cloud_volume_mask'].data
+cloud_volume_mask = xr.load_dataset(config['cloud_volume_mask_file'])['cloud_volume_mask'].data
 # cloud_volume_mask[0,:,:] = cloud_volume_mask[-1,:,:] = cloud_volume_mask[:,0,:] = cloud_volume_mask[:,-1,:] = 0.0
 extinction_coordinate_transform = None
 extinction_state2grid_transform = at3d.transforms.StateToGridMask(mask=cloud_volume_mask)
@@ -131,7 +160,11 @@ state_gen = at3d.medium.StateGenerator(
 )
 min_bounds, max_bounds = state_gen.transform_bounds()
 
-extinction_init = cloud_volume_mask.astype(float)*0.1
+if(config['restart_iter']!=None):
+    restart_sensor, restart_solver, restart_rte_grid = at3d.util.load_forward_model(config['restart_iter'])
+    extinction_init = restart_solver[wavelength].medium['cloud'].extinction.data
+else:
+    extinction_init = cloud_volume_mask.astype(float)*0.1
 extinction_init_1d = state_gen._unknown_scatterers['cloud'].variables['extinction'].state_to_grid.inverse_transform(extinction_init)
 x0 = state_gen._unknown_scatterers['cloud'].variables['extinction'].coordinate_transform.inverse_transform(extinction_init_1d)
 state_gen(x0)
