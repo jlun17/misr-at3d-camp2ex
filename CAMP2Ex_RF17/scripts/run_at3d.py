@@ -14,8 +14,9 @@ from util import load_sensor_dict
 import yaml
 
 if(len(sys.argv) > 1):
-    config = yaml.load(sys.argv[1])
-else:
+    with open(sys.argv[1], 'r') as file:
+        config = yaml.safe_load(file)
+elif(len(sys.argv) == 1):
     config = {}
 
     ## INPUT
@@ -35,6 +36,8 @@ else:
 
     ## OUTPUT
     config['out_path'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/default/'
+else:
+    config = None
 
 assert 'obs_file' in config, 'obs_file not in config'
 assert 'rte_grid_file' in config, 'rte_grid_file not in config'
@@ -160,11 +163,11 @@ state_gen = at3d.medium.StateGenerator(
 )
 min_bounds, max_bounds = state_gen.transform_bounds()
 
-if(config['restart_iter']!=None):
+if(config['restart_iter'].lower() == 'none'):
+    extinction_init = cloud_volume_mask.astype(float)*0.1
+else:
     restart_sensor, restart_solver, restart_rte_grid = at3d.util.load_forward_model(config['restart_iter'])
     extinction_init = restart_solver[wavelength].medium['cloud'].extinction.data
-else:
-    extinction_init = cloud_volume_mask.astype(float)*0.1
 extinction_init_1d = state_gen._unknown_scatterers['cloud'].variables['extinction'].state_to_grid.inverse_transform(extinction_init)
 x0 = state_gen._unknown_scatterers['cloud'].variables['extinction'].coordinate_transform.inverse_transform(extinction_init_1d)
 state_gen(x0)
