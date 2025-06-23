@@ -12,6 +12,7 @@ import os
 from collections import OrderedDict
 from util import load_sensor_dict
 import yaml
+import time
 
 if(len(sys.argv) > 1):
     with open(sys.argv[1], 'r') as file:
@@ -216,10 +217,12 @@ optimizer = at3d.optimize.Optimizer(objective_function, callback_fn=callback, op
 # Save initial conditions
 save(optimizer)
 
+start_time = time.time()
 result = optimizer.minimize(x0)
+end_time = time.time()
 
 outFile = '{}iter{:03d}.nc'.format(iter_dir, optimizer.iteration+1)
 at3d.util.save_forward_model(outFile, forward_sensors, solvers)
 
-
+print('Execution time: {} seconds'.format(end_time - start_time))
 
