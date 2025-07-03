@@ -1,0 +1,11 @@
+out_path: /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V03/CVM/noSC/
+restart_iter: none
+obs_file: /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_default_1400.nc
+rte_grid_file: /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/RTG_1400.nc
+background_scatterers_file: /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/MIXTURE_default.nc
+cloud_volume_mask_file: /data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/CVM_noSC_open.nc
+config_file_name: /data/keeling/a/johntl3/b/LundstromPub2025/configs/misr_config.json
+surface_wind_speed: 0.67
+a: 4.292
+b: 2.623
+error_cov_sf: 10000000.0
