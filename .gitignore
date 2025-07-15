@@ -1,5 +1,6 @@
 # Data
 data/
+data_old/
 *.nc
 *.hdf
 *.log
