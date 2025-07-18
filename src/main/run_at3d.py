@@ -10,7 +10,7 @@ import at3d
 import netCDF4 as nc
 import os
 from collections import OrderedDict
-from src.utils.util import load_sensor_dict
+from utils.util import load_sensor_dict
 import yaml
 import time
 
