@@ -42,6 +42,7 @@ def save_sensor_dict(file_name, sensors):
     for i, (key, sensor) in enumerate(sensors.items()):
         for j, image in enumerate(sensor['sensor_list']):
             image.to_netcdf(file_name, 'a', group='sensors/{}/{:d}'.format(key, j))
+    print('Saved sensors to: {}'.format(file_name))
 
 def load_sensor_dict(file_name):
     """
