@@ -3,6 +3,7 @@ import os
 import at3d
 import netCDF4 as nc
 import xarray as xr
+from pathlib import Path
 
 def save_sensor_dict(file_name, sensors):
     """
@@ -25,12 +26,13 @@ def save_sensor_dict(file_name, sensors):
     # make a safe file name. We always want one that works
     # as we might have spent a lot of time to make the input data.
     counter = 1
-    initial_file_name = file_name
-    while os.path.exists(file_name):
+    initial_file_name = Path(file_name)
+    file_name = initial_file_name
+    while file_name.exists():
         if counter > 1:
-            file_name = '{}_{}.nc'.format(file_name[:-5], counter)
+            file_name = initial_file_name.with_name(f"{initial_file_name.stem}_{counter}.nc")
         else:
-            file_name = '{}_{}.nc'.format(file_name[:-3], counter)
+            file_name = initial_file_name.with_name(f"{initial_file_name.stem}_{counter}.nc")
         counter += 1
 
     if counter > 1:
