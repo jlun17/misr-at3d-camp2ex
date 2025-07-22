@@ -1,7 +1,8 @@
-# conda env 'at3d_pure'
+# conda env 'at3d_pure_k9'
 
+import pathlib
 from pathlib import Path
-PROJECT_ROOT = Path().resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 import sys
 sys.path.append(str(PROJECT_ROOT))
@@ -11,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import at3d
 import netCDF4 as nc
-import os
+# import os
 from collections import OrderedDict
 from src.utils.util import load_sensor_dict
 import yaml
@@ -20,17 +21,23 @@ import time
 def load_config(filename=PROJECT_ROOT / 'configs' / 'at3d_default_config.yml'):
     with open(filename, 'r') as file:
         config = yaml.safe_load(file)
-    assert 'obs_file' in config, 'obs_file not in config'
-    assert 'rte_grid_file' in config, 'rte_grid_file not in config'
-    assert 'background_scatterers_file' in config, 'background_scatterers_file not in config'
-    assert 'cloud_volume_mask_file' in config, 'cloud_volume_mask_file not in config'
-    assert 'config_file_name' in config, 'config_file_name not in config'
-    assert 'surface_wind_speed' in config, 'surface_wind_speed not in config'
-    assert 'a' in config, 'a not in config'
-    assert 'b' in config, 'b not in config'
-    assert 'error_cov_sf' in config, 'error_cov_sf not in config'
-    assert 'restart_iter' in config, 'restart_iter not in config'
-    assert 'out_path' in config, 'out_path not in config'
+    required_keys = [
+        'obs_file', 'rte_grid_file', 'background_scatterers_file',
+        'cloud_volume_mask_file', 'config_file_name', 'surface_wind_speed',
+        'a', 'b', 'error_cov_sf', 'restart_iter', 'out_path'
+    ]
+    for key in required_keys:
+        assert key in config, f'{key} not in config'
+    
+    # Convert paths in the config to pathlib.Path objects
+    required_keys.remove('surface_wind_speed')
+    required_keys.remove('a')
+    required_keys.remove('b')
+    required_keys.remove('error_cov_sf')
+    if(config['restart_iter'].lower() == 'none'):
+        required_keys.remove('restart_iter')
+    for key in required_keys:
+        config[key] = PROJECT_ROOT / config[key]
     return config
 
 if(len(sys.argv) > 1):
@@ -40,20 +47,15 @@ elif(len(sys.argv) == 1):
 else:
     config = None
 
-iter_dir = '{}iterations/'.format(config['out_path'])
-supp_file = '{}loss.csv'.format(config['out_path'])
+iter_dir = config['out_path'] / 'iterations'
+supp_file = config['out_path'] / 'loss.csv'
 
 # Define output files
-os.makedirs(iter_dir, exist_ok=True)
-assert len(os.listdir(iter_dir)) == 0, "Iterations already saved in {}.\nSpecify a new output location.".format(iter_dir)
-
-# Save config
-if(len(sys.argv) == 1):
-    with open('{}config.yml'.format(config['out_path']), 'w') as file:
-        yaml.dump(config, file, sort_keys=False)
+iter_dir.mkdir(parents=True, exist_ok=True)
+assert not any(iter_dir.iterdir()), f"Iterations already saved in {iter_dir}.\nSpecify a new output location."
 
 # Mie table directory
-mie_dir = '/data/keeling/a/johntl3/b/LundstromPub2025/mie_tables/'
+mie_dir = PROJECT_ROOT / 'mie_tables'
 
 rte_grid = xr.load_dataset(config['rte_grid_file'])
 obs = load_sensor_dict(config['obs_file'])
@@ -99,7 +101,7 @@ mie_mono_table = at3d.mie.get_mono_table(
 )
 mie_mono_tables = OrderedDict()
 mie_mono_tables[wavelength] = mie_mono_table
-# mie_mono_table.to_netcdf('{}red_mie_table.nc'.format(mie_dir))
+# mie_mono_table.to_netcdf(mie_dir / 'red_mie_table.nc')
 
 cloud_optical_prop_gen = at3d.medium.OpticalPropertyGenerator(
     'cloud',
@@ -129,7 +131,6 @@ grid_to_optical_properties = at3d.medium.GridToOpticalProperties(
 )
 
 cloud_volume_mask = xr.load_dataset(config['cloud_volume_mask_file'])['cloud_volume_mask'].data
-# cloud_volume_mask[0,:,:] = cloud_volume_mask[-1,:,:] = cloud_volume_mask[:,0,:] = cloud_volume_mask[:,-1,:] = 0.0
 extinction_coordinate_transform = None
 extinction_state2grid_transform = at3d.transforms.StateToGridMask(mask=cloud_volume_mask)
 extinction_transforms = (extinction_coordinate_transform, extinction_state2grid_transform)
@@ -152,11 +153,11 @@ state_gen = at3d.medium.StateGenerator(
 )
 min_bounds, max_bounds = state_gen.transform_bounds()
 
-if(config['restart_iter'].lower() == 'none'):
-    extinction_init = cloud_volume_mask.astype(float)*0.1
-else:
+if(type(config['restart_iter'].lower()) == pathlib.PosixPath):
     restart_sensor, restart_solver, restart_rte_grid = at3d.util.load_forward_model(config['restart_iter'])
     extinction_init = restart_solver[wavelength].medium['cloud'].extinction.data
+else:
+    extinction_init = cloud_volume_mask.astype(float)*0.1
 extinction_init_1d = state_gen._unknown_scatterers['cloud'].variables['extinction'].state_to_grid.inverse_transform(extinction_init)
 x0 = state_gen._unknown_scatterers['cloud'].variables['extinction'].coordinate_transform.inverse_transform(extinction_init_1d)
 state_gen(x0)
@@ -187,9 +188,9 @@ objective_function = at3d.optimize.ObjectiveFunction.LevisApproxUncorrelatedL2(
 
 def save(optimizer):
     if(optimizer.iteration == None):
-        outFile = '{}iter{:03d}.nc'.format(iter_dir, 0)
+        outFile = iter_dir / 'iter{:03d}.nc'.format(0)
     else:
-        outFile = '{}iter{:03d}.nc'.format(iter_dir, optimizer.iteration)
+        outFile = iter_dir / 'iter{:03d}.nc'.format(optimizer.iteration)
     at3d.util.save_forward_model(outFile, forward_sensors, solvers)
     with open(supp_file, mode='a') as file:
         file.write('{}, {}, {}\n'.format(optimizer.iteration, optimizer.objective_fn.loss, optimizer.objective_fn._total_obj_fn_time))
@@ -209,7 +210,7 @@ start_time = time.time()
 result = optimizer.minimize(x0)
 end_time = time.time()
 
-outFile = '{}iter{:03d}.nc'.format(iter_dir, optimizer.iteration+1)
+outFile = iter_dir / 'iter{:03d}.nc'.format(optimizer.iteration+1)
 at3d.util.save_forward_model(outFile, forward_sensors, solvers)
 
 print('Execution time: {} seconds'.format(end_time - start_time))
