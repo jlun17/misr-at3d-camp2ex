@@ -1,7 +1,10 @@
 # conda env 'at3d_pure'
 
+from pathlib import Path
+PROJECT_ROOT = Path().resolve().parent.parent
+
 import sys
-sys.path.append('/data/keeling/a/johntl3/b/LundstromPub2025/src')
+sys.path.append(str(PROJECT_ROOT))
 
 import xarray as xr
 import numpy as np
@@ -10,47 +13,32 @@ import at3d
 import netCDF4 as nc
 import os
 from collections import OrderedDict
-from utils.util import load_sensor_dict
+from src.utils.util import load_sensor_dict
 import yaml
 import time
 
-if(len(sys.argv) > 1):
-    with open(sys.argv[1], 'r') as file:
+def load_config(filename=PROJECT_ROOT / 'configs' / 'at3d_default_config.yml'):
+    with open(filename, 'r') as file:
         config = yaml.safe_load(file)
+    assert 'obs_file' in config, 'obs_file not in config'
+    assert 'rte_grid_file' in config, 'rte_grid_file not in config'
+    assert 'background_scatterers_file' in config, 'background_scatterers_file not in config'
+    assert 'cloud_volume_mask_file' in config, 'cloud_volume_mask_file not in config'
+    assert 'config_file_name' in config, 'config_file_name not in config'
+    assert 'surface_wind_speed' in config, 'surface_wind_speed not in config'
+    assert 'a' in config, 'a not in config'
+    assert 'b' in config, 'b not in config'
+    assert 'error_cov_sf' in config, 'error_cov_sf not in config'
+    assert 'restart_iter' in config, 'restart_iter not in config'
+    assert 'out_path' in config, 'out_path not in config'
+    return config
+
+if(len(sys.argv) > 1):
+    config = load_config(sys.argv[1])
 elif(len(sys.argv) == 1):
-    config = {}
-
-    ## INPUT
-    config['obs_file'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/AT3D_OBS_CAMP2Ex_RF17_default_1400.nc'
-    config['rte_grid_file'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/RTG_1400.nc'
-    config['background_scatterers_file'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/MIXTURE_default.nc'
-    config['cloud_volume_mask_file'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/intermediate_data/CVM_default_open.nc'
-    config['config_file_name'] = '/data/keeling/a/johntl3/b/LundstromPub2025/configs/misr_config.json'
-    config['surface_wind_speed'] = 0.67 # m/s
-    # Reff(z) = a*z + b
-    config['a'] = 4.292 # um / km
-    config['b'] = 2.623 # um
-    config['error_cov_sf'] = 1e7
-
-    ## Restart From
-    config['restart_iter'] = None
-
-    ## OUTPUT
-    config['out_path'] = '/data/keeling/a/johntl3/b/LundstromPub2025/CAMP2Ex_RF17/AT3D_output/V02/default/'
+    config = load_config() # load default config
 else:
     config = None
-
-assert 'obs_file' in config, 'obs_file not in config'
-assert 'rte_grid_file' in config, 'rte_grid_file not in config'
-assert 'background_scatterers_file' in config, 'background_scatterers_file not in config'
-assert 'cloud_volume_mask_file' in config, 'cloud_volume_mask_file not in config'
-assert 'config_file_name' in config, 'config_file_name not in config'
-assert 'surface_wind_speed' in config, 'surface_wind_speed not in config'
-assert 'a' in config, 'a not in config'
-assert 'b' in config, 'b not in config'
-assert 'error_cov_sf' in config, 'error_cov_sf not in config'
-assert 'restart_iter' in config, 'restart_iter not in config'
-assert 'out_path' in config, 'out_path not in config'
 
 iter_dir = '{}iterations/'.format(config['out_path'])
 supp_file = '{}loss.csv'.format(config['out_path'])
