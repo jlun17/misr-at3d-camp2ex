@@ -12,7 +12,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import at3d
 import netCDF4 as nc
-# import os
 from collections import OrderedDict
 from src.utils.util import load_sensor_dict
 import yaml
@@ -54,9 +53,7 @@ supp_file = config['out_path'] / 'loss.csv'
 iter_dir.mkdir(parents=True, exist_ok=True)
 assert not any(iter_dir.iterdir()), f"Iterations already saved in {iter_dir}.\nSpecify a new output location."
 
-# Mie table directory
-mie_dir = PROJECT_ROOT / 'mie_tables'
-
+# Load rte grid and observations
 rte_grid = xr.load_dataset(config['rte_grid_file'])
 obs = load_sensor_dict(config['obs_file'])
 
@@ -65,18 +62,20 @@ inverse_covariance = config['error_cov_sf'] * np.diag(np.ones(4))
 uncertainty = at3d.uncertainties.Uncertainty(inverse_covariance, 'L2')
 obs.add_uncertainty_model('MISR', uncertainty)
 
+# Make forward sensors
 forward_sensors = obs.make_forward_sensors()
 wavelength = forward_sensors.get_unique_solvers()[0]
 
-# Surface wind speed comes from ERA5 reanalysis - 
-# see ./ancillary/CAMP2Ex_RF17_ERA5_Surface.ipynb
+# Define surface reflectance model based on surface wind speed
 surfaces = OrderedDict()
 m_water = 1.33197 - 1j*2.41e-8
 surfaces[wavelength] = at3d.surface.wave_fresnel(np.real(m_water), np.imag(m_water), config['surface_wind_speed'])
 
+# Load SHODM numerical parameters
 numerical_parameters = OrderedDict()
 numerical_parameters[wavelength] = at3d.configuration.get_config(config['config_file_name'])
 
+# Set solar source
 sources = OrderedDict()
 sources[wavelength] = at3d.source.solar(
     wavelength,
@@ -86,23 +85,24 @@ sources[wavelength] = at3d.source.solar(
     skyrad=0.0
 )
 
+# Load background atmosphere
 background_optical_scatterers = OrderedDict()
 background_properties = xr.load_dataset(config['background_scatterers_file'])
 background_optical_scatterers[wavelength] = {}
 background_optical_scatterers[wavelength]['background'] = background_properties
 
+# Generate cloud optical properties
 mie_mono_table = at3d.mie.get_mono_table(
     'Water',
     (wavelength, wavelength),
     max_integration_radius=65.0,
     minimum_effective_radius=5.5,
-    relative_dir=mie_dir,
+    relative_dir=PROJECT_ROOT / 'mie_tables',
     verbose=False
 )
 mie_mono_tables = OrderedDict()
 mie_mono_tables[wavelength] = mie_mono_table
-# mie_mono_table.to_netcdf(mie_dir / 'red_mie_table.nc')
-
+# mie_mono_table.to_netcdf(PROJECT_ROOT / 'mie_tables' / 'red_mie_table.nc')
 cloud_optical_prop_gen = at3d.medium.OpticalPropertyGenerator(
     'cloud',
     mie_mono_tables,
@@ -114,7 +114,6 @@ cloud_optical_prop_gen = at3d.medium.OpticalPropertyGenerator(
     reff=np.linspace(1, 30, 20),
     veff=np.linspace(0.01, 0.2, 5)
 )
-
 cloud = rte_grid.copy(deep=True)
 cloud['density'] = (['x','y','z'], np.zeros((rte_grid.dims['x'], rte_grid.dims['y'], rte_grid.dims['z'])))
 reff_profile = config['a'] * rte_grid.z.data + config['b']
@@ -123,24 +122,25 @@ cloud['reff'] = (['x','y','z'], reff)
 cloud['veff'] = (['x','y','z'], np.ones(cloud.density.shape) * 0.1)
 cloud_optical_properties = cloud_optical_prop_gen(cloud)
 
+# Generate unknown scatterers
 grid_to_optical_properties = at3d.medium.GridToOpticalProperties(
     rte_grid,
     'cloud',
     wavelength,
     fixed_dataset=cloud_optical_properties[wavelength].drop_vars('extinction')
 )
-
 cloud_volume_mask = xr.load_dataset(config['cloud_volume_mask_file'])['cloud_volume_mask'].data
 extinction_coordinate_transform = None
 extinction_state2grid_transform = at3d.transforms.StateToGridMask(mask=cloud_volume_mask)
 extinction_transforms = (extinction_coordinate_transform, extinction_state2grid_transform)
-
 cloud_unknown_scatterer = at3d.medium.UnknownScatterer(grid_to_optical_properties, extinction=extinction_transforms)
 unknown_scatterers = at3d.containers.UnknownScatterers(cloud_unknown_scatterer)
 
+# Set polarization
 num_stokes = OrderedDict()
 num_stokes[wavelength] = 1
 
+# Set forward model
 solvers = at3d.containers.SolversDict()
 state_gen = at3d.medium.StateGenerator(
     solvers,
@@ -153,6 +153,7 @@ state_gen = at3d.medium.StateGenerator(
 )
 min_bounds, max_bounds = state_gen.transform_bounds()
 
+# Initialize extinction
 if(type(config['restart_iter'].lower()) == pathlib.PosixPath):
     restart_sensor, restart_solver, restart_rte_grid = at3d.util.load_forward_model(config['restart_iter'])
     extinction_init = restart_solver[wavelength].medium['cloud'].extinction.data
@@ -162,8 +163,10 @@ extinction_init_1d = state_gen._unknown_scatterers['cloud'].variables['extinctio
 x0 = state_gen._unknown_scatterers['cloud'].variables['extinction'].coordinate_transform.inverse_transform(extinction_init_1d)
 state_gen(x0)
 
+# Forward simulate initialization
 forward_sensors.get_measurements(solvers)
 
+# Set objective function
 parallel_solve_kwargs = {
     'n_jobs': 1,
     'mpi_comm': None, 
@@ -171,7 +174,6 @@ parallel_solve_kwargs = {
     'maxiter': 100, 
     'init_solution': True
 }
-
 objective_function = at3d.optimize.ObjectiveFunction.LevisApproxUncorrelatedL2(
     obs,
     solvers,
@@ -186,6 +188,7 @@ objective_function = at3d.optimize.ObjectiveFunction.LevisApproxUncorrelatedL2(
     max_bounds=max_bounds
 )
 
+# Callback function
 def save(optimizer):
     if(optimizer.iteration == None):
         outFile = iter_dir / 'iter{:03d}.nc'.format(0)
@@ -197,21 +200,26 @@ def save(optimizer):
     return {'None': None}
 callback = at3d.callback.CallbackFn(save)
 
+# Generate supplementary file
 with open(supp_file, mode='a') as file:
     file.write('iteration, loss, total_obj_fn_time\n')
 
+# Setup optimizer
 options = {'maxiter': 100, 'maxls': 25, 'disp': True, 'gtol': 1e-16, 'ftol': 1e-8}
 optimizer = at3d.optimize.Optimizer(objective_function, callback_fn=callback, options=options)
 
 # Save initial conditions
 save(optimizer)
 
+# Perform retrieval
 start_time = time.time()
 result = optimizer.minimize(x0)
 end_time = time.time()
 
+# Save final retrieval
 outFile = iter_dir / 'iter{:03d}.nc'.format(optimizer.iteration+1)
 at3d.util.save_forward_model(outFile, forward_sensors, solvers)
 
+# Print execution time
 print('Execution time: {} seconds'.format(end_time - start_time))
 
