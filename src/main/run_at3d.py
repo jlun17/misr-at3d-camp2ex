@@ -159,7 +159,7 @@ state_gen = at3d.medium.StateGenerator(
 min_bounds, max_bounds = state_gen.transform_bounds()
 
 # Initialize extinction
-if(type(config['restart_iter'].lower()) == pathlib.PosixPath):
+if(type(config['restart_iter']) == pathlib.PosixPath):
     restart_sensor, restart_solver, restart_rte_grid = at3d.util.load_forward_model(config['restart_iter'])
     extinction_init = restart_solver[wavelength].medium['cloud'].extinction.data
 else:
