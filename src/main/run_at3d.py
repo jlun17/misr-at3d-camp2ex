@@ -77,11 +77,16 @@ numerical_parameters[wavelength] = at3d.configuration.get_config(config['config_
 
 # Set solar source
 sources = OrderedDict()
+S0 = 1361 # W m^-2
+r0 = 1 # AU
+r = 1.00112201638005
+E0 = (r0 / r)**2
+F0 = E0 * S0
 sources[wavelength] = at3d.source.solar(
     wavelength,
     -1*obs['MISR']['sensor_list'][0].mu0,
     obs['MISR']['sensor_list'][0].SAA,
-    solarflux=1.0,
+    solarflux=F0,
     skyrad=0.0
 )
 
