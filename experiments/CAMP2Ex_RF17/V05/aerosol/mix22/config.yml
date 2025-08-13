@@ -1,0 +1,11 @@
+out_path: /data/keeling/a/johntl3/b/LundstromPub2025/experiments/CAMP2Ex_RF17/V05/aerosol/mix22/
+restart_iter: none
+obs_file: /data/keeling/a/johntl3/b/LundstromPub2025/data/interim/AT3D_OBS_I_CAMP2Ex_RF17_default.nc
+rte_grid_file: /data/keeling/a/johntl3/b/LundstromPub2025/data/interim/RTG_default.nc
+background_scatterers_file: /data/keeling/a/johntl3/b/LundstromPub2025/data/interim/MIXTURE_default_mix22.nc
+cloud_volume_mask_file: /data/keeling/a/johntl3/b/LundstromPub2025/data/interim/CVM_CAMP2Ex_RF17_default_open.nc
+config_file_name: /data/keeling/a/johntl3/b/LundstromPub2025/configs/misr_config.json
+surface_wind_speed: 0.67
+a: 4.292
+b: 2.623
+error_cov_sf: 300.0
