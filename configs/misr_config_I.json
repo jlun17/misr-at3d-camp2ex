@@ -16,7 +16,7 @@
     "description": "(NPHI) number of discrete ordinates covering 0 < phi < 2pi"
   },
   "split_accuracy": {
-    "default_value": 50,
+    "default_value": 30,
     "description": [
       "(SPLITACC) cell splitting accuracy; grid cells that have the adaptive splitting criterion above this value are split.",
       "This is an absolute measure, but cannot be easily associated with the resulting radiometric accuracy. Set to zero or negative for no adaptive cell splitting."
