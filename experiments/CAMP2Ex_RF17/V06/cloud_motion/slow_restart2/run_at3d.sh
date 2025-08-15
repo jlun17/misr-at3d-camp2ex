@@ -4,7 +4,7 @@
 #SBATCH -p node
 #SBATCH -n 4
 #SBATCH --mem 64GB
-#SBATCH --time=1-02:00:00
+#SBATCH --time=0-08:00:00
 #SBATCH --mail-type=BEGIN
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-type=END
