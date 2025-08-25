@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=default
+#SBATCH --job-name=default_restart
 #SBATCH -p node
 #SBATCH -n 4
 #SBATCH --mem 64GB
@@ -12,4 +12,4 @@
 
 source ~/miniconda3/bin/activate at3d_pure_k9
 
-python /data/keeling/a/johntl3/b/LundstromPub2025/src/main/run_at3d.py /data/keeling/a/johntl3/b/LundstromPub2025/experiments/CAMP2Ex_RF17/V07/default/config.yml > /data/keeling/a/johntl3/b/LundstromPub2025/experiments/CAMP2Ex_RF17/V07/default/at3d.log
+python /data/keeling/a/johntl3/b/LundstromPub2025/src/main/run_at3d.py /data/keeling/a/johntl3/b/LundstromPub2025/experiments/CAMP2Ex_RF17/V07/default_restart/config.yml > /data/keeling/a/johntl3/b/LundstromPub2025/experiments/CAMP2Ex_RF17/V07/default_restart/at3d.log
