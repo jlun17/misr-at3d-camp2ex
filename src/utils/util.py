@@ -4,6 +4,8 @@ import at3d
 import netCDF4 as nc
 import xarray as xr
 from pathlib import Path
+import yaml
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 def save_sensor_dict(file_name, sensors):
     """
@@ -66,3 +68,25 @@ def load_sensor_dict(file_name):
             sensor_dataset['use_subpixel_rays'] = sensor_dataset['use_subpixel_rays'].data.astype(bool)
             sensor_dict.add_sensor(key, sensor_dataset)
     return sensor_dict
+
+def load_config(filename=PROJECT_ROOT / 'configs' / 'at3d_default_config.yml'):
+    with open(filename, 'r') as file:
+        config = yaml.safe_load(file)
+    required_keys = [
+        'obs_file', 'rte_grid_file', 'background_scatterers_file',
+        'cloud_volume_mask_file', 'config_file_name', 'surface_wind_speed',
+        'a', 'b', 'error_cov_sf', 'restart_iter', 'out_path'
+    ]
+    for key in required_keys:
+        assert key in config, f'{key} not in config'
+    
+    # Convert paths in the config to pathlib.Path objects
+    required_keys.remove('surface_wind_speed')
+    required_keys.remove('a')
+    required_keys.remove('b')
+    required_keys.remove('error_cov_sf')
+    if(config['restart_iter'].lower() == 'none'):
+        required_keys.remove('restart_iter')
+    for key in required_keys:
+        config[key] = PROJECT_ROOT / config[key]
+    return config
