@@ -90,3 +90,16 @@ def load_config(filename=PROJECT_ROOT / 'configs' / 'at3d_default_config.yml'):
     for key in required_keys:
         config[key] = PROJECT_ROOT / config[key]
     return config
+
+def set_labels(ax_flat):
+    """
+    Method to label each panel of a figure with a), b), ect.
+    """
+    for i, a in enumerate(ax_flat):
+        a.set_title(
+            '{})'.format(chr(i+97)),
+            fontfamily='serif',
+            loc='left',
+            fontsize='medium',
+            fontweight='bold'
+        )
