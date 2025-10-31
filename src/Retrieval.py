@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 import xarray as xr
 from src.utils.util import load_config, load_sensor_dict
+from collections import OrderedDict
 
 """
 Module: Retrieval
@@ -49,6 +50,8 @@ class Retrieval:
         Radiative transfer solver for the currently loaded retreival iteration.
     rte_grid : xarray.Dataset | None
         Radiative transfer grid for the curently loaded retreival iteration.
+    LUT : xarray.Dataset | None
+        Look up table mapping column optical depth to radiance.
 
     Examples
     --------
@@ -67,6 +70,7 @@ class Retrieval:
         self.sensors_retrieval = None
         self.solvers_retrieval = None
         self.rte_grid = None
+        self.LUT = None
 
     def __repr__(self):
         """Return the experiment root path as string."""
@@ -136,3 +140,109 @@ class Retrieval:
         """
         extinction = self.solvers_retrieval[wavelength].medium[medium].extinction.data
         return np.max(extinction)
+    
+    def load_LUT(self, LUT_file):
+        LUT_file = Path(LUT_file)
+        if LUT_file.exists():
+            self.LUT = xr.open_dataset(LUT_file)
+            print(f'LUT loaded from {str(LUT_file)}')
+        else:
+            print('Generating LUT...')
+            self.LUT = self.generate_1D_LUT()
+            print('LUT Generated.')
+            print(f'Saved LUT to {str(LUT_file)}')
+
+    def generate_1D_LUT(self):
+        assert len(self.wavelengths == 1)
+        wavelength = self.wavelengths[0]
+
+        ## Create rte_grid with same vertical grid, but only a 3 x 3 in the horizontal
+        rte_grid = at3d.grid.make_grid(self.rte_grid.delx.data, 3, self.rte_grid.dely.data, 3, self.rte_grid.z.data)
+
+        ## Define cloud base and cloud top
+        cb = 0.4
+        ct = 0.7
+        i_low = np.argwhere(rte_grid.z.data >= cb)[0][0]
+        i_up = np.argwhere(rte_grid.z.data <= ct)[-1][0]
+        thickness = rte_grid.z.data[i_up] - rte_grid.z.data[i_low]
+        ## Define optical depths in LUT
+        tausA = np.linspace(0, 4.75, 20)
+        tausB = np.logspace(np.log10(5), 2, 40)
+        taus = np.append(tausA, tausB)
+
+        ## Make a sensor to observe radiance
+        LUT_sensors = at3d.containers.SensorsDict()
+        LUT_sensor = at3d.sensor.orthographic_projection(
+            wavelength=wavelength,
+            bounding_box=rte_grid,
+            x_resolution=rte_grid.delx.data,
+            y_resolution=rte_grid.dely.data,
+            azimuth=0,
+            zenith=0,
+            altitude='TOA',
+            stokes='I',
+            sub_pixel_ray_args={'method': None}
+        )
+        LUT_sensors.add_sensor('LUT_sensor', LUT_sensor)
+
+        ## Set up LUT solver with the features of the retreival solver
+        # Numerical parameters
+        numerical_parameters = self.solvers_retrieval[wavelength].numerical_params
+        numerical_parameters['ip_flag'] = 3 # Set to independent pixel approximation
+        numerical_parameters['split_accuracy'] = 1e-3
+        # Surface
+        surface = self.solvers_retrieval[wavelength].surface
+
+        # Source
+        source = self.solvers_retrieval[wavelength].source
+
+        # Medium
+        medium = OrderedDict()
+        medium['background'] = self.solvers_retrieval[wavelength].medium['background'].isel(x=slice(0,3), y=slice(0,3))
+        medium['cloud'] = self.solvers_retrieval[wavelength].medium['cloud'].isel(x=slice(0,3), y=slice(0,3))
+
+        Is = np.zeros(taus.shape)
+        num_unique = np.zeros(taus.shape)
+        diff = np.zeros(taus.shape)
+        LUT_solvers = at3d.containers.SolversDict()
+        for i, tau in enumerate(taus):
+            ext = np.zeros((rte_grid.dims['x'], rte_grid.dims['y'], rte_grid.dims['z']))
+            ext[:, :, i_low:i_up] = tau/thickness
+            medium['cloud']['extinction'] = (['x','y','z'], ext)
+
+            LUT_solver = at3d.solver.RTE(
+                numerical_params = numerical_parameters,
+                medium = medium,
+                source = source,
+                surface = surface,
+                num_stokes = 1
+            )
+            LUT_solvers.add_solver(wavelength, LUT_solver)
+            LUT_sensors.get_measurements(LUT_solvers)
+
+            cam = LUT_sensors['LUT_sensor']['sensor_list'][0]
+            num_unique[i] = len(np.unique(cam.I.data))
+            diff[i] = np.max(cam.I.data) - np.min(cam.I.data)
+            # assert num_unique[i] <= 3, "Tau = {}\n{}".format(tau, cam.I)
+            Is[i] = np.mean(cam.I.data)
+        LUT = xr.Dataset(
+            coords = dict(I=Is),
+            data_vars = dict(
+                tau=(['I'], taus),
+                num_unique = (['I'], num_unique),
+                diff = (['I'], diff)
+            )
+        )
+        assert np.all(np.diff(LUT.tau.data) > 0), "LUT tau not monotonic"
+        assert np.all(np.diff(LUT.I.data) > 0), "LUT I not monotonic"
+        return LUT
+    
+def generate_1D_LUT(solver, sensor, taus):
+    """
+    Construct a lookup table (LUT) relating total column optical depth to mean measured 
+    radiance using 1D radiative transfer.
+
+    Parameters
+    ----------
+    solver : at3d.solver
+    """
