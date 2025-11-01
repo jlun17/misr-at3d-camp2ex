@@ -1,5 +1,7 @@
 from pathlib import Path
-from src.Retrieval import Retrieval
+import pandas as pd
+import numpy as np
+from src.Retrieval import Retrieval, threshold_cloud
 
 """
 Module: ExperimentSet
@@ -34,8 +36,8 @@ class ExperimentSet:
     """
     def __init__(self, root_dir):
         self.root_dir = Path(root_dir)
-        self.retrieval_list = []
-        self.retrievals = []
+        # self.retrieval_list = []
+        self.retrievals = {}
 
     def set_retrieval_list(self):
         """
@@ -44,7 +46,8 @@ class ExperimentSet:
         A directory is considered a retrieval if it contains an 'iterations' subdirectory.
         The discovery traverses subdirectories recursively.
         """
-        self.retrieval_list = self._traverse(self.root_dir)
+        paths = self._traverse(self.root_dir)
+        self.retrievals = {Path(p): None for p in paths}
 
     def load_retrievals(self, iteration=None):
         """
@@ -56,11 +59,49 @@ class ExperimentSet:
             If provided, passed to each Retrieval.load_retrieval call to load a specific iteration.
             If not provided, the last iteration is loaded.
         """
-        for retrieval in self.retrieval_list:
-            R = Retrieval(retrieval)
+        for rpath in self.retrievals:
+            R = Retrieval(rpath)
             if iteration:
                 R.load_retrieval(iteration)
-            self.retrievals.append(R)
+            self.retrievals[rpath] = R
+
+    def table_cloud_stats(self, wavelength, medium, extinction_th=0, tau_th=0):
+        rows = []
+        for rpath in self.retrievals:
+            R = self.retrievals[rpath]
+            try:
+                N, vol, tau_bar, cloud_frac = R.get_cloud_volume_stats(wavelength, medium, extinction_th=extinction_th, tau_th=tau_th)
+            except Exception as e:
+                print(e)
+                N, vol, tau_bar, cloud_frac = (float('nan'), float('nan'), float('nan'), float('nan'))
+            rows.append({
+                'retrieval': str(rpath),
+                'cloudy voxel count': N,
+                'volume': vol,
+                'tau bar': tau_bar,
+                'cloud fraction': cloud_frac
+            })
+
+        df = pd.DataFrame(rows, columns=['retrieval', 'cloudy voxel count', 'volume', 'tau bar', 'cloud fraction'])
+        return df.set_index('retrieval')
+
+    def compare_to(self, reference_key, wavelength, medium, extinction_th=0, tau_th=0):
+        ref = self.retrievals[reference_key]
+        rows = []
+        for rpath in self.retrievals:
+            R = self.retrievals[rpath]
+            try:
+                rel_diff, rel_bias = _compare(R, ref, wavelength, medium, extinction_th=extinction_th, tau_th=tau_th)
+            except Exception as e:
+                print(e.with_traceback())
+                rel_diff, rel_bias = (float('nan'), float('nan'))
+            rows.append({
+                'retrieval': str(rpath),
+                'relative difference': rel_diff,
+                'relative bias': rel_bias
+            })
+        df = pd.DataFrame(rows, columns=['retrieval', 'relative difference', 'relative bias'])
+        return df.set_index('retrieval')
 
     def _traverse(self, dir_path):
         """
@@ -85,3 +126,12 @@ class ExperimentSet:
             if n.is_dir():
                 results.extend(self._traverse(n))
         return results
+    
+def _compare(r, rref, wavelength, medium, extinction_th=0, tau_th=0):
+    r = r.solvers_retrieval[wavelength].medium[medium]
+    r_ext = threshold_cloud(r, extinction_th=extinction_th, tau_th=tau_th).extinction.data
+    rref = rref.solvers_retrieval[wavelength].medium[medium]
+    rref_ext = threshold_cloud(rref, extinction_th=extinction_th, tau_th=tau_th).extinction.data
+    rel_difference = 100 * (np.sum((r_ext - rref_ext)**2))**0.5 / (np.sum(rref_ext)**2)**0.5
+    rel_bias = 100 * (np.sum(np.abs(r_ext)) - np.sum(np.abs(rref_ext))) / (np.sum(np.abs(rref_ext)))
+    return rel_difference, rel_bias

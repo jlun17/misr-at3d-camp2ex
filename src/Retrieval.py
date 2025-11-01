@@ -122,6 +122,23 @@ class Retrieval:
             ax.hist(np.ravel(extinction[extinction > 0]), label='{} {} {}'.format(self.exp_name, w, medium), **kwargs)
             ax.set_xlabel(r'extinction (km$^{-1}$)')
     
+    def get_cloud_volume_stats(self, wavelength, medium, extinction_th=0, tau_th=0):
+        # Threshold cloud
+        cloud = self.solvers_retrieval[wavelength].medium[medium].copy(deep=True)
+        cloud = threshold_cloud(cloud, extinction_th=extinction_th, tau_th=tau_th)
+
+        # Count number of cloudy voxels after thresholding
+        N = cloud.cloud_volume_mask.sum().data
+        # Compute cloud volume of the thresholded mask
+        cloud_volume = cloud.cloud_volume_mask.integrate(['x','y','z']).data
+        # Calculate masked optical depth
+        cloud['tau'] = cloud.extinction.integrate(['z'])
+        # Calculate thresholded cloud mean optical depth
+        tau_bar = cloud.tau.where(cloud.tau > 0).mean().data
+        # Calculate thresholded cloud fraction
+        cloud_fraction = ((cloud.tau > 0).sum() / cloud.tau.size).data
+        return N, cloud_volume, tau_bar, cloud_fraction
+
     def max_extinction(self, wavelength, medium):
         """
         Return maximum extinction value for a given solver wavelength and medium.
@@ -237,6 +254,27 @@ class Retrieval:
         assert np.all(np.diff(LUT.I.data) > 0), "LUT I not monotonic"
         return LUT
     
+def threshold_cloud(cloud, extinction_th=0, tau_th=0):
+    # Get the unthresholded extinction
+    extinction = cloud.extinction
+    # Get the thresholded extinction mask
+    ext_mask = (extinction > extinction_th).astype(np.int64)
+    # Get the unthresholded optical depth
+    tau = extinction.integrate(['z'])
+    # Get the thresholded optical depth mask
+    tau_mask = (tau > tau_th).astype(np.int64)
+    # Combine the optical depth and extinction thresholds
+    cloud_volume_mask = ext_mask.data.copy()
+    cloud_volume_mask[tau_mask.data == 0] = 0
+    cloud['cloud_volume_mask'] = (['x','y','z'], cloud_volume_mask)
+    cloud.cloud_volume_mask.attrs['extinction_th'] = extinction_th
+    cloud.cloud_volume_mask.attrs['tau_th'] = tau_th
+    # Update extinction field to be masked
+    cloud['extinction'] = cloud.cloud_volume_mask * cloud.extinction
+    cloud.extinction.attrs['extinction_th'] = extinction_th
+    cloud.extinction.attrs['tau_th'] = tau_th
+    return cloud
+
 def generate_1D_LUT(solver, sensor, taus):
     """
     Construct a lookup table (LUT) relating total column optical depth to mean measured 
