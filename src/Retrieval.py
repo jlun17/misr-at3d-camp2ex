@@ -122,22 +122,34 @@ class Retrieval:
             ax.hist(np.ravel(extinction[extinction > 0]), label='{} {} {}'.format(self.exp_name, w, medium), **kwargs)
             ax.set_xlabel(r'extinction (km$^{-1}$)')
     
-    def get_cloud_volume_stats(self, wavelength, medium, extinction_th=0, tau_th=0):
+    def get_cloud_volume_stats(self, wavelength, medium, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
         # Threshold cloud
-        cloud = self.solvers_retrieval[wavelength].medium[medium].copy(deep=True)
+        cloud = self.solvers_retrieval[wavelength].medium[medium]
         cloud = threshold_cloud(cloud, extinction_th=extinction_th, tau_th=tau_th)
 
-        # Count number of cloudy voxels after thresholding
-        N = cloud.cloud_volume_mask.sum().data
-        # Compute cloud volume of the thresholded mask
-        cloud_volume = cloud.cloud_volume_mask.integrate(['x','y','z']).data
         # Calculate masked optical depth
         cloud['tau'] = cloud.extinction.integrate(['z'])
-        # Calculate thresholded cloud mean optical depth
-        tau_bar = cloud.tau.where(cloud.tau > 0).mean().data
-        # Calculate thresholded cloud fraction
-        cloud_fraction = ((cloud.tau > 0).sum() / cloud.tau.size).data
-        return N, cloud_volume, tau_bar, cloud_fraction
+        # Set zero extinction to nan
+        extinction = cloud.extinction.data
+        extinction[extinction == 0] = np.nan
+
+        stats = {
+            'retrieval': str(self.root_dir),
+            'cloud fraction': ((cloud.tau > 0).sum() / cloud.tau.size).data,
+            'tau bar': cloud.tau.where(cloud.tau > 0).mean().data,
+            'volume': cloud.cloud_volume_mask.integrate(['x','y','z']).data,
+            'cloudy voxel count': cloud.cloud_volume_mask.sum().data,
+            'min extinction': np.nanmin(extinction),
+            'q5': np.nanpercentile(extinction, 5),
+            'q25': np.nanpercentile(extinction, 25),
+            'q50': np.nanpercentile(extinction, 50),
+            'q75': np.nanpercentile(extinction, 75),
+            'q95': np.nanpercentile(extinction, 95),
+            'max extinction': np.nanmax(extinction),
+            'mean extinction': np.nanmean(extinction),
+            'std extinction': np.nanstd(extinction)
+        }
+        return stats
 
     def max_extinction(self, wavelength, medium):
         """
@@ -254,15 +266,16 @@ class Retrieval:
         assert np.all(np.diff(LUT.I.data) > 0), "LUT I not monotonic"
         return LUT
     
-def threshold_cloud(cloud, extinction_th=0, tau_th=0):
+def threshold_cloud(cloud, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
+    cloud = cloud.copy(deep=True)
     # Get the unthresholded extinction
     extinction = cloud.extinction
     # Get the thresholded extinction mask
-    ext_mask = (extinction > extinction_th).astype(np.int64)
+    ext_mask = np.logical_and(extinction > extinction_th[0], extinction <= extinction_th[1]).astype(np.int64)
     # Get the unthresholded optical depth
     tau = extinction.integrate(['z'])
     # Get the thresholded optical depth mask
-    tau_mask = (tau > tau_th).astype(np.int64)
+    tau_mask = np.logical_and(tau > tau_th[0], tau <= tau_th[1]).astype(np.int64)
     # Combine the optical depth and extinction thresholds
     cloud_volume_mask = ext_mask.data.copy()
     cloud_volume_mask[tau_mask.data == 0] = 0

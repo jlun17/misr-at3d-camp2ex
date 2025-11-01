@@ -65,42 +65,23 @@ class ExperimentSet:
                 R.load_retrieval(iteration)
             self.retrievals[rpath] = R
 
-    def table_cloud_stats(self, wavelength, medium, extinction_th=0, tau_th=0):
+    def cloud_stats(self, wavelength, medium, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
         rows = []
         for rpath in self.retrievals:
             R = self.retrievals[rpath]
-            try:
-                N, vol, tau_bar, cloud_frac = R.get_cloud_volume_stats(wavelength, medium, extinction_th=extinction_th, tau_th=tau_th)
-            except Exception as e:
-                print(e)
-                N, vol, tau_bar, cloud_frac = (float('nan'), float('nan'), float('nan'), float('nan'))
-            rows.append({
-                'retrieval': str(rpath),
-                'cloudy voxel count': N,
-                'volume': vol,
-                'tau bar': tau_bar,
-                'cloud fraction': cloud_frac
-            })
-
-        df = pd.DataFrame(rows, columns=['retrieval', 'cloudy voxel count', 'volume', 'tau bar', 'cloud fraction'])
+            stats = R.get_cloud_volume_stats(wavelength, medium, extinction_th=extinction_th, tau_th=tau_th)
+            rows.append(stats)
+        df = pd.DataFrame(rows, columns=[s for s in stats])
         return df.set_index('retrieval')
 
-    def compare_to(self, reference_key, wavelength, medium, extinction_th=0, tau_th=0):
+    def compare_to(self, reference_key, wavelength, medium, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
         ref = self.retrievals[reference_key]
         rows = []
         for rpath in self.retrievals:
             R = self.retrievals[rpath]
-            try:
-                rel_diff, rel_bias = _compare(R, ref, wavelength, medium, extinction_th=extinction_th, tau_th=tau_th)
-            except Exception as e:
-                print(e.with_traceback())
-                rel_diff, rel_bias = (float('nan'), float('nan'))
-            rows.append({
-                'retrieval': str(rpath),
-                'relative difference': rel_diff,
-                'relative bias': rel_bias
-            })
-        df = pd.DataFrame(rows, columns=['retrieval', 'relative difference', 'relative bias'])
+            stats = _compare(R, ref, wavelength, medium, extinction_th=extinction_th, tau_th=tau_th)
+            rows.append(stats)
+        df = pd.DataFrame(rows, columns=[s for s in stats])
         return df.set_index('retrieval')
 
     def _traverse(self, dir_path):
@@ -127,11 +108,16 @@ class ExperimentSet:
                 results.extend(self._traverse(n))
         return results
     
-def _compare(r, rref, wavelength, medium, extinction_th=0, tau_th=0):
-    r = r.solvers_retrieval[wavelength].medium[medium]
-    r_ext = threshold_cloud(r, extinction_th=extinction_th, tau_th=tau_th).extinction.data
+def _compare(r, rref, wavelength, medium, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
+    r_cloud = r.solvers_retrieval[wavelength].medium[medium]
+    r_ext = threshold_cloud(r_cloud, extinction_th=extinction_th, tau_th=tau_th).extinction.data
     rref = rref.solvers_retrieval[wavelength].medium[medium]
     rref_ext = threshold_cloud(rref, extinction_th=extinction_th, tau_th=tau_th).extinction.data
     rel_difference = 100 * (np.sum((r_ext - rref_ext)**2))**0.5 / (np.sum(rref_ext)**2)**0.5
     rel_bias = 100 * (np.sum(np.abs(r_ext)) - np.sum(np.abs(rref_ext))) / (np.sum(np.abs(rref_ext)))
-    return rel_difference, rel_bias
+    stats = {
+        'retrieval': str(r.root_dir),
+        'relative bias': rel_bias,
+        'relative difference': rel_difference
+    }
+    return stats
