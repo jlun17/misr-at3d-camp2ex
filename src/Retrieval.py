@@ -3,8 +3,8 @@ import at3d
 import warnings
 import numpy as np
 import xarray as xr
-from src.utils.util import load_config, load_sensor_dict
-from collections import OrderedDict
+from src.utils.util import load_config, load_sensor_dict, save_sensor_dict
+import src.Tau1D
 
 """
 Module: Retrieval
@@ -64,6 +64,8 @@ class Retrieval:
         self.iter_dir = self.root_dir / 'iterations'
         self.config = load_config(self.root_dir / 'config.yml')
         self.obs = load_sensor_dict(self.config['obs_file'])
+        self.obs = convert_to_BRF(self.obs)
+        self.masks = self.obs.make_forward_sensors()
         self.wavelengths = self.obs.get_unique_solvers()
         self.cvm = xr.load_dataset(self.config['cloud_volume_mask_file'])
         self.iteration = None
@@ -101,6 +103,59 @@ class Retrieval:
                 self.sensors_retrieval, self.solvers_retrieval, self.rte_grid = at3d.util.load_forward_model(iter_file)
         else:
             self.sensors_retrieval, self.solvers_retrieval, self.rte_grid = at3d.util.load_forward_model(iter_file)
+        self.sensors_retrieval = convert_to_BRF(self.sensors_retrieval)
+
+        # Calculate optical path and optical depth for each sensor. Modifies sensor in place.
+        # Note: Non-cloud constituents are assumed to be plane parallel and their optical 
+        # depths are subtracted from the total optical depth.
+        background_optical_depth = {}
+        for wavelength in self.solvers_retrieval:
+            tmp_tau = 0
+            for medium in self.solvers_retrieval[wavelength].medium:
+                if(medium != 'cloud'):
+                    tmp_taus = np.unique(self.solvers_retrieval[wavelength].medium[medium].extinction.integrate('z').data)
+                    assert len(tmp_taus) == 1, "{} max tau: {} and min tau: {}".format(medium, np.max(tmp_taus), np.min(tmp_taus))
+                    tmp_tau += tmp_taus[0]
+            background_optical_depth[wavelength] = tmp_tau
+
+        for instrument in self.sensors_retrieval:
+            for cam in self.sensors_retrieval[instrument]['sensor_list']:
+                self.solvers_retrieval[float(cam.wavelength.data)].optical_path(cam)
+                cam['optical_path'].attrs['mode'] = 'AT3D'
+                cam['optical_depth'] = cam.optical_path*cam.ray_mu
+                cam['optical_depth'].attrs['mode'] = 'AT3D'
+                cam['optical_depth'] = cam.optical_depth - background_optical_depth[float(cam.wavelength.data)]
+                cam['optical_depth'].attrs['background_optical_depth'] = background_optical_depth[float(cam.wavelength.data)]
+                cam['optical_path'] = cam.optical_depth / cam.ray_mu
+                cam['optical_path'].attrs['background_optical_depth'] = background_optical_depth[float(cam.wavelength.data)]
+
+    def add_threshold_mask(self, sensors_th, instrument, mask_name, variable, thresholds):
+        """Apply a camera-by-camera threshold mask.
+
+        Modifies the self.masks attribute in place with the threshold mask.
+        Mask returns 1 if the `variable` >= threshold.
+        
+        Parameters
+        ----------
+        sensors_th : at3d.containers.SensorDict
+            Dataset containing the variable to apply threshold to.
+        instrument : str
+            Instrument in the sensor dict to apply the mask to.
+        mask_name : str
+            Name to call the mask.
+        variable : str
+            Variable to apply the threshold to (i.e., 'I', 'brf', 'optical_depth', ect.).
+        thresholds : dict | float
+            Key corresponds to the name of each sensor (i.e. 'DF').
+            Values hold the threshold. If thresholds is a float, then theshold 
+            is applied uniformly over all cameras.
+        """
+        th = thresholds
+        for cam_th, cam_mask in zip(sensors_th[instrument]['sensor_list'], self.masks[instrument]['sensor_list']):
+            if(isinstance(thresholds, dict)):
+                th = thresholds[cam_th.name]
+            cam_mask[mask_name] = (cam_th[variable] >= th).astype(np.int64)
+            cam_mask[mask_name].attrs[f'{variable} threshold'] = th
 
     def plot_extinction_hist(self, medium, ax, **kwargs):
         """
@@ -173,99 +228,39 @@ class Retrieval:
     def load_LUT(self, LUT_file):
         LUT_file = Path(LUT_file)
         if LUT_file.exists():
-            self.LUT = xr.open_dataset(LUT_file)
-            print(f'LUT loaded from {str(LUT_file)}')
+            self.LUT = load_sensor_dict(LUT_file)
+            return True
         else:
-            print('Generating LUT...')
-            self.LUT = self.generate_1D_LUT()
-            print('LUT Generated.')
-            print(f'Saved LUT to {str(LUT_file)}')
-
-    def generate_1D_LUT(self):
-        assert len(self.wavelengths == 1)
-        wavelength = self.wavelengths[0]
-
-        ## Create rte_grid with same vertical grid, but only a 3 x 3 in the horizontal
-        rte_grid = at3d.grid.make_grid(self.rte_grid.delx.data, 3, self.rte_grid.dely.data, 3, self.rte_grid.z.data)
-
-        ## Define cloud base and cloud top
-        cb = 0.4
-        ct = 0.7
-        i_low = np.argwhere(rte_grid.z.data >= cb)[0][0]
-        i_up = np.argwhere(rte_grid.z.data <= ct)[-1][0]
-        thickness = rte_grid.z.data[i_up] - rte_grid.z.data[i_low]
-        ## Define optical depths in LUT
-        tausA = np.linspace(0, 4.75, 20)
-        tausB = np.logspace(np.log10(5), 2, 40)
-        taus = np.append(tausA, tausB)
-
-        ## Make a sensor to observe radiance
-        LUT_sensors = at3d.containers.SensorsDict()
-        LUT_sensor = at3d.sensor.orthographic_projection(
-            wavelength=wavelength,
-            bounding_box=rte_grid,
-            x_resolution=rte_grid.delx.data,
-            y_resolution=rte_grid.dely.data,
-            azimuth=0,
-            zenith=0,
-            altitude='TOA',
-            stokes='I',
-            sub_pixel_ray_args={'method': None}
-        )
-        LUT_sensors.add_sensor('LUT_sensor', LUT_sensor)
-
-        ## Set up LUT solver with the features of the retreival solver
-        # Numerical parameters
-        numerical_parameters = self.solvers_retrieval[wavelength].numerical_params
-        numerical_parameters['ip_flag'] = 3 # Set to independent pixel approximation
-        numerical_parameters['split_accuracy'] = 1e-3
-        # Surface
-        surface = self.solvers_retrieval[wavelength].surface
-
-        # Source
-        source = self.solvers_retrieval[wavelength].source
-
-        # Medium
-        medium = OrderedDict()
-        medium['background'] = self.solvers_retrieval[wavelength].medium['background'].isel(x=slice(0,3), y=slice(0,3))
-        medium['cloud'] = self.solvers_retrieval[wavelength].medium['cloud'].isel(x=slice(0,3), y=slice(0,3))
-
-        Is = np.zeros(taus.shape)
-        num_unique = np.zeros(taus.shape)
-        diff = np.zeros(taus.shape)
-        LUT_solvers = at3d.containers.SolversDict()
-        for i, tau in enumerate(taus):
-            ext = np.zeros((rte_grid.dims['x'], rte_grid.dims['y'], rte_grid.dims['z']))
-            ext[:, :, i_low:i_up] = tau/thickness
-            medium['cloud']['extinction'] = (['x','y','z'], ext)
-
-            LUT_solver = at3d.solver.RTE(
-                numerical_params = numerical_parameters,
-                medium = medium,
-                source = source,
-                surface = surface,
-                num_stokes = 1
-            )
-            LUT_solvers.add_solver(wavelength, LUT_solver)
-            LUT_sensors.get_measurements(LUT_solvers)
-
-            cam = LUT_sensors['LUT_sensor']['sensor_list'][0]
-            num_unique[i] = len(np.unique(cam.I.data))
-            diff[i] = np.max(cam.I.data) - np.min(cam.I.data)
-            # assert num_unique[i] <= 3, "Tau = {}\n{}".format(tau, cam.I)
-            Is[i] = np.mean(cam.I.data)
-        LUT = xr.Dataset(
-            coords = dict(I=Is),
-            data_vars = dict(
-                tau=(['I'], taus),
-                num_unique = (['I'], num_unique),
-                diff = (['I'], diff)
-            )
-        )
-        assert np.all(np.diff(LUT.tau.data) > 0), "LUT tau not monotonic"
-        assert np.all(np.diff(LUT.I.data) > 0), "LUT I not monotonic"
-        return LUT
+            return False
     
+    def generate_1D_LUT(self, wavelength, taus, cloud_base, cloud_top, LUT_outfile=None):
+        if not self.load_LUT(LUT_outfile):
+            self.LUT = src.Tau1D.generate_1D_LUT(
+                self.solvers_retrieval[wavelength],
+                self.obs,
+                self.rte_grid,
+                taus,
+                cloud_base,
+                cloud_top
+            )
+            if(LUT_outfile):
+                save_sensor_dict(LUT_outfile, self.LUT)
+
+    def retrieve_1D_tau(self, outfile=None):
+        if(outfile is not None):
+            outfile = Path(outfile)
+            if(outfile.exists()):
+                self.obs = load_sensor_dict(outfile)
+            else:
+                if(self.LUT is None):
+                    raise Exception("Must load a LUT first")
+                self.obs = src.Tau1D.retrieve_tau1D(self.obs, self.LUT)
+                save_sensor_dict(outfile, self.obs)
+        else:
+            if(self.LUT is None):
+                raise Exception("Must load a LUT first")
+            self.obs = src.Tau1D.retrieve_tau1D(self.obs, self.LUT)
+
 def threshold_cloud(cloud, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
     cloud = cloud.copy(deep=True)
     # Get the unthresholded extinction
@@ -288,12 +283,9 @@ def threshold_cloud(cloud, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
     cloud.extinction.attrs['tau_th'] = tau_th
     return cloud
 
-def generate_1D_LUT(solver, sensor, taus):
-    """
-    Construct a lookup table (LUT) relating total column optical depth to mean measured 
-    radiance using 1D radiative transfer.
-
-    Parameters
-    ----------
-    solver : at3d.solver
-    """
+def convert_to_BRF(sensors):
+    for instrument in sensors:
+        for i, cam in enumerate(sensors[instrument]['sensor_list']):
+            cam['brf'] = (np.pi * cam.I) / cam.mu0
+            sensors[instrument]['sensor_list'][i] = cam
+    return sensors
