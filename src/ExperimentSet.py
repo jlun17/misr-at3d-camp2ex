@@ -65,6 +65,20 @@ class ExperimentSet:
                 R.load_retrieval(iteration)
             self.retrievals[rpath] = R
 
+    def chi2(self, S_1, variable, mask_conds):
+        """Compute the chi squared for each retreival and return the results in a dataframe"""
+        rows = []
+        for rpath in self.retrievals:
+            R = self.retrievals[rpath]
+            c2 = R.get_chi2(S_1, variable, mask_conds)
+            row = {
+                'retrieval': str(rpath),
+                'chi2': c2
+            }
+            rows.append(row)
+        df = pd.DataFrame(rows, columns=[s for s in row])
+        return df.set_index('retrieval')
+
     def cloud_stats(self, wavelength, medium, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
         rows = []
         for rpath in self.retrievals:

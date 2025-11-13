@@ -129,6 +129,84 @@ class Retrieval:
                 cam['optical_path'] = cam.optical_depth / cam.ray_mu
                 cam['optical_path'].attrs['background_optical_depth'] = background_optical_depth[float(cam.wavelength.data)]
 
+        # Add a standard optical depth mask and ray containment masks
+        for instrument in self.sensors_retrieval:
+            self.add_threshold_mask(self.sensors_retrieval, instrument, 'tau0.3mask', 'optical_depth', 0.3)
+            self.add_ray_containment_mask()
+
+    def get_chi2(self, S_1, variable='I', mask_conds={}):
+        """Compute chi squared given an inverse error covariance matrix
+        
+        Parameters
+        ----------
+        S_1 : callable
+            Function that takes y as input that return the inverse 
+            error covariance matrix.
+        variable : string
+            Observable to comput chi squared on. Typically it is 'I'.
+        mask_conds : dict
+            Masking conditions to pass to obs_vec.
+        
+        Returns
+        -------
+        chi2 : float
+            Chi squared value.
+        """
+        F = obs_vec(self.sensors_retrieval, variable, self.masks, mask_conds)
+        y = obs_vec(self.obs, variable, self.masks, mask_conds)
+        return chi2(y, F, S_1(y))
+
+    def add_ray_containment_mask(self, mask_name='ray_containment'):
+        """Determine a mask of which rays pass through the retreival domain or not.
+        
+        Lables each ray with:
+            0: Ray neither starts nor finishes within the domain
+            1: Ray partially passes through the retrieval domain
+            2: Ray completely passes through the retreival domain
+        
+        Note: Rays that partially pass through the domain but don't start or end within 
+        the domain will be labled with 0. For large domains and moderate viewing angles
+        the number of missed rays is minimal. The issue becomes worse with high viewing
+        zenith angles and/or small domains.
+
+        Parameters
+        ----------
+        mask_name : str
+            Sets the name of the mask in the self.masks attribute
+        """
+
+        for instrument in self.obs:
+            for cam, cam_mask in zip(self.obs[instrument]['sensor_list'], self.masks[instrument]['sensor_list']):
+                phi = np.degrees(cam.ray_phi.data)
+                theta = np.degrees(np.arccos(cam.ray_mu.data))
+                z = np.unique(cam.ray_z.data)
+                assert len(z) == 1, "Sensor altitude is not constant"
+                z = z[0]
+                assert z == np.max(self.rte_grid.z.data), "Sensor is not at the top of the domain"
+                deltax, deltay = at3d.preprocessing.project_to_altitude(theta, phi, -z)
+                ray_x_top = cam.ray_x.data
+                ray_y_top = cam.ray_y.data
+                ray_x_bot = ray_x_top + deltax
+                ray_y_bot = ray_y_top + deltay
+                bbox_x_low = np.min(self.rte_grid.x.data)
+                bbox_x_high = np.max(self.rte_grid.x.data)
+                bbox_y_low = np.min(self.rte_grid.y.data)
+                bbox_y_high = np.max(self.rte_grid.y.data)
+                top_in = np.logical_and(
+                    np.logical_and(ray_x_top > bbox_x_low, ray_x_top < bbox_x_high),
+                    np.logical_and(ray_y_top > bbox_y_low, ray_y_top < bbox_y_high)
+                )
+                bot_in = np.logical_and(
+                    np.logical_and(ray_x_bot > bbox_x_low, ray_x_bot < bbox_x_high),
+                    np.logical_and(ray_y_bot > bbox_y_low, ray_y_bot < bbox_y_high)
+                )
+                mask = np.zeros(cam.dims['nrays'])
+                mask[top_in] += 1
+                mask[bot_in] += 1
+                cam_mask[mask_name] = (['nrays'], mask)
+                cam_mask[mask_name].attrs['Mask Key'] = '0: Ray neither starts nor finishes within the domain\n1:Ray partially passes through the domain\n2: Ray is fully coontained within the domain' 
+
+
     def add_threshold_mask(self, sensors_th, instrument, mask_name, variable, thresholds):
         """Apply a camera-by-camera threshold mask.
 
@@ -289,3 +367,40 @@ def convert_to_BRF(sensors):
             cam['brf'] = (np.pi * cam.I) / cam.mu0
             sensors[instrument]['sensor_list'][i] = cam
     return sensors
+
+def obs_vec(sensor, variable, masks, mask_conds):
+    """Convert an observable from a sensor dict into a vector according to a mask.
+
+    Parameters
+    ----------
+    sensor : at3d.containers.SensorDict
+        A dataset containg the sensors.
+    variable : string
+        The variable contained within each sensor to be vectorized.
+    masks : at3d.containers.SensorDict
+        A dataset mirroring the structure of the sensor, but containing masks
+    mask_conds : dict
+        A dictionary where the key is the name of the mask and the value is a tuple
+        with equality conditions for the mask. If it is empty, no mask is applied.
+    
+    Returns
+    -------
+    vec : np.array
+        A masked vectorized version of the variable from the sensors.
+    """
+    vec = np.array([])
+    for instrument in sensor:
+        for cam, cam_mask in zip(sensor[instrument]['sensor_list'], masks[instrument]['sensor_list']):
+            mask = np.ones(cam.dims['nrays'], dtype=bool)
+            for m in mask_conds:
+                mask = np.logical_and(
+                    mask,
+                    np.logical_or(cam_mask[m].data == mask_conds[m][0], cam_mask[m].data == mask_conds[m][1])
+                )
+            vec = np.append(vec, cam[variable].data[mask])
+    return vec
+
+def chi2(y, F, S_1):
+    """Compute the chi squared"""
+    m = len(y)
+    return 0.5 * (1/m) * np.matmul(y-F, np.matmul(S_1, y-F))
