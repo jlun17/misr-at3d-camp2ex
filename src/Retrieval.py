@@ -256,6 +256,26 @@ class Retrieval:
             ax.set_xlabel(r'extinction (km$^{-1}$)')
     
     def get_cloud_volume_stats(self, wavelength, medium, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
+        """Generate a set of statistics relating to the cloud volume.
+        
+        Parameters
+        ----------
+        wavelength : float
+            Solver wavelength to obtain the optical properties.
+        medium : string
+            Name of the medium to obtain the optical properties.
+        extinction_th : list
+            Lower (exclusive) and upper (inclusive) bounds on extinction.
+            Passed to threshold cloud.
+        tau_th : list
+            Lower (exclusive) and upper (inclusive) bounds on extinction.
+            Passed to threshold cloud.
+        
+        Return
+        ------
+        stats : dict
+            Dictionary containing computed statistics.
+        """
         # Threshold cloud
         cloud = self.solvers_retrieval[wavelength].medium[medium]
         cloud = threshold_cloud(cloud, extinction_th=extinction_th, tau_th=tau_th)
@@ -312,6 +332,25 @@ class Retrieval:
             return False
     
     def generate_1D_LUT(self, wavelength, taus, cloud_base, cloud_top, LUT_outfile=None):
+        """Generate a 1D lookup table based on the sensors and the solvers of the retrieval.
+        
+        If a LUT with the filename exists, then load that LUT. Otherwise generate.
+
+        LUT loaded into self.LUT
+
+        Parameters
+        ----------
+        wavelength : float
+            Wavelength to compute LUT at.
+        taus : list | np.array
+            Optical depths that form the LUT.
+        cloud_base : float
+            Plane parallel cloud base height in km. Will be snapped to rte_grid.z.
+        cloud_top : float
+            Plane parallel cloud top height in km. Will be snapped to rte_grid.z. 
+        LUT_outfile : Path | str
+            File to save the LUT as an AT3D SensorDict.
+        """
         if not self.load_LUT(LUT_outfile):
             self.LUT = src.Tau1D.generate_1D_LUT(
                 self.solvers_retrieval[wavelength],
@@ -325,6 +364,21 @@ class Retrieval:
                 save_sensor_dict(LUT_outfile, self.LUT)
 
     def retrieve_1D_tau(self, outfile=None):
+        """Perform a 1D optical depth retreival from the observations.
+
+        Results are loaded into self.obs
+        
+        If the outfile already exists, just load the outfile into obs,
+        otherwise, check if a LUT has been loaded and perform retrieval.
+        Results are loaded into obs.
+        
+        Note: a LUT must already be loaded into the object
+        
+        Parameters
+        ----------
+        outfile : Path | string
+            Path and filename to save results to or load from.
+        """
         if(outfile is not None):
             outfile = Path(outfile)
             if(outfile.exists()):
@@ -340,6 +394,27 @@ class Retrieval:
             self.obs = src.Tau1D.retrieve_tau1D(self.obs, self.LUT)
 
 def threshold_cloud(cloud, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
+    """Apply a threshold mask to the extinction coefficient.
+    
+    A grid point with extinction e belonging to a column with optical depth t is not masked if 
+    extinction_th[0] < e <= extinction_th[1] AND tau_th[0] < t <= tau_th[1]
+    OTHERWISE e is set to 0.
+
+    Parameters
+    ----------
+    cloud : xr.Dataset
+        Dataset with x, y, z coordinates and extinction as a variable.
+    extinction_th : list
+        Lower (exclusive) and upper (inclusive) bounds on extinction.
+    tau_th : list
+        Lower (exclusive) and upper (inclusive) bounds on extinction.
+    
+    Returns
+    -------
+    cloud : xr.Dataset
+        New copy of the cloud dataset with the addition of the resulting cloud volume mask
+        and the updated masked extinction with masked valued set to 0.
+    """
     cloud = cloud.copy(deep=True)
     # Get the unthresholded extinction
     extinction = cloud.extinction
@@ -362,6 +437,20 @@ def threshold_cloud(cloud, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
     return cloud
 
 def convert_to_BRF(sensors):
+    """Convert to BRF when I_at3d = I_obs / F_0 = (BRF_obs * mu_0) / pi
+    
+    Parameters
+    ----------
+    sensors : at3d.containers.SensorDict
+        A set of sensors where "I" is equal to 
+        I = I_obs / F_0 = (BRF_obs * mu_0) / pi
+    
+    Returns
+    -------
+    sensors : at3d.containers.SensorDict
+        The set of sensors modified in place with a new variable called 'brf'.
+
+    """
     for instrument in sensors:
         for i, cam in enumerate(sensors[instrument]['sensor_list']):
             cam['brf'] = (np.pi * cam.I) / cam.mu0
@@ -401,6 +490,21 @@ def obs_vec(sensor, variable, masks, mask_conds):
     return vec
 
 def chi2(y, F, S_1):
-    """Compute the chi squared"""
+    """Compute the chi squared.
+    
+    Parameters
+    ----------
+    y : np.array
+        Observation vector
+    F : np.array
+        Forward simulation vector
+    S_1 : np.array
+        Inverse error covariance matrix
+
+    Returns
+    -------
+    chi2 : float
+        Misfit.
+    """
     m = len(y)
     return 0.5 * (1/m) * np.matmul(y-F, np.matmul(S_1, y-F))

@@ -88,6 +88,8 @@ def generate_1D_LUT(solver, sensors, rte_grid, taus, cloud_base, cloud_top):
 
 def retrieve_tau1D(obs, LUT):
     """Perform a 1D optical depth retreival.
+
+    Modifies obs in place.
     
     Parameters
     ----------
@@ -100,8 +102,7 @@ def retrieve_tau1D(obs, LUT):
     Returns
     -------
     obs : at3d.containers.SensorsDict
-        An updated observation dataset with the retrieved optical 
-        depth and optical path.
+        Modifies obs in place with the retrieved optical depth and optical path.
     """
     for instrument in obs:
         for i, cam in enumerate(obs[instrument]['sensor_list']):
