@@ -78,7 +78,7 @@ class Retrieval:
         """Return the experiment root path as string."""
         return str(self.root_dir)
     
-    def load_retrieval(self, iteration=-1, quiet=True):
+    def load_retrieval(self, iteration=-1, quiet=True, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
         """
         Load retrieval outputs for a given iteration.
 
@@ -88,6 +88,10 @@ class Retrieval:
             Index into sorted iteration files (default: -1 -> last).
         quiet : bool, optional
             If True, suppress warnings during forward model load.
+        extinction_th : list
+            Lower (exclusive) and upper (inclusive) bounds on cloud extinction.
+        tau_th : list
+            Lower (exclusive) and upper (inclusive) bounds on cloud extinction.
 
         Raises
         ------
@@ -104,6 +108,14 @@ class Retrieval:
         else:
             self.sensors_retrieval, self.solvers_retrieval, self.rte_grid = at3d.util.load_forward_model(iter_file)
         self.sensors_retrieval = convert_to_BRF(self.sensors_retrieval)
+
+        # Apply extinction and optical depth threshold to cloud at each wavelength.
+        for wavelength in self.solvers_retrieval:
+            self.solvers_retrieval[wavelength].medium['cloud'] = threshold_cloud(
+                cloud=self.solvers_retrieval[wavelength].medium['cloud'],
+                extinction_th=extinction_th,
+                tau_th=tau_th
+            )
 
         # Calculate optical path and optical depth for each sensor. Modifies sensor in place.
         # Note: Non-cloud constituents are assumed to be plane parallel and their optical 
@@ -129,10 +141,65 @@ class Retrieval:
                 cam['optical_path'] = cam.optical_depth / cam.ray_mu
                 cam['optical_path'].attrs['background_optical_depth'] = background_optical_depth[float(cam.wavelength.data)]
 
+        # Calculate cloud base hight, cloud top height, and cloud geometric thickness
+        for wavelength in self.solvers_retrieval:
+            for medium in self.solvers_retrieval[wavelength].medium:
+                cloud = self.solvers_retrieval[wavelength].medium[medium]
+                cloud['cth'] = xr.where(cloud.extinction > 0, cloud.z, np.nan).max(dim='z', skipna=True)
+                cloud['cbh'] = xr.where(cloud.extinction > 0, cloud.z, np.nan).min(dim='z', skipna=True)
+                cloud['geometric_thickness'] = cloud['cth'] - cloud['cbh']
+
         # Add a standard optical depth mask and ray containment masks
         for instrument in self.sensors_retrieval:
             self.add_threshold_mask(self.sensors_retrieval, instrument, 'tau0.3mask', 'optical_depth', 0.3)
             self.add_ray_containment_mask()
+
+    def get_cth(self, wavelength, medium):
+        return self.solvers_retrieval[wavelength].medium[medium].cth.data
+
+    def get_cbh(self, wavelength, medium):
+        return self.solvers_retrieval[wavelength].medium[medium].cbh.data
+    
+    def get_geo_thickness(self, wavelength, medium):
+        return self.solvers_retrieval[wavelength].medium[medium].geometric_thickness.data
+
+    def calc_CF(self, wavelength, medium):
+        cloud = self.solvers_retrieval[wavelength].medium[medium]
+        return ((cloud.tau > 0).sum() / cloud.tau.size).data
+    
+    def calc_volume(self, wavelength, medium):
+        cloud = self.solvers_retrieval[wavelength].medium[medium]
+        return cloud.cloud_volume_mask.integrate(['x','y','z']).data
+
+    def to_dataframe(self, wavelength, medium, variable, name_map=None):
+        """Converts an atmospheric constituent to a pandas dataframe.
+        
+        Parameters
+        ----------
+        wavelength : float
+            Wavelength of atmospheric consitituent.
+        medium : str
+            Name of the atmospheric constituent (i.e. 'cloud').
+        variable : str
+            Name of the variable to convert to a dataframe (i.e. 'extinction').
+        name_map : dict (optional)
+            Maps self.exp_name to a modified experiment name.
+        
+        Returns
+        -------
+        df : pandas.Dataframe
+            Dataframe with x, y, z, and 'variable' columns plus retrieval ID columns.
+        """
+        df = self.solvers_retrieval[wavelength].medium[medium][variable].to_dataframe()
+        df = df[df[variable].notnull()]
+        if(variable == 'extinction'):
+            df = df[df[variable] > 0]
+        df['retrieval_root'] = str(self.root_dir)
+        df['retrieval_name'] = self.exp_name
+        if(name_map):
+            for key in name_map[self.exp_name]:
+                df[key] = name_map[self.exp_name][key]
+        return df.reset_index().drop(['reff', 'veff'], axis=1, errors='ignore')
 
     def get_chi2(self, S_1, variable='I', mask_conds={}):
         """Compute chi squared given an inverse error covariance matrix
@@ -206,7 +273,6 @@ class Retrieval:
                 cam_mask[mask_name] = (['nrays'], mask)
                 cam_mask[mask_name].attrs['Mask Key'] = '0: Ray neither starts nor finishes within the domain\n1:Ray partially passes through the domain\n2: Ray is fully coontained within the domain' 
 
-
     def add_threshold_mask(self, sensors_th, instrument, mask_name, variable, thresholds):
         """Apply a camera-by-camera threshold mask.
 
@@ -255,7 +321,7 @@ class Retrieval:
             ax.hist(np.ravel(extinction[extinction > 0]), label='{} {} {}'.format(self.exp_name, w, medium), **kwargs)
             ax.set_xlabel(r'extinction (km$^{-1}$)')
     
-    def get_cloud_volume_stats(self, wavelength, medium, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
+    def get_cloud_volume_stats(self, wavelength, medium):
         """Generate a set of statistics relating to the cloud volume.
         
         Parameters
@@ -264,12 +330,6 @@ class Retrieval:
             Solver wavelength to obtain the optical properties.
         medium : string
             Name of the medium to obtain the optical properties.
-        extinction_th : list
-            Lower (exclusive) and upper (inclusive) bounds on extinction.
-            Passed to threshold cloud.
-        tau_th : list
-            Lower (exclusive) and upper (inclusive) bounds on extinction.
-            Passed to threshold cloud.
         
         Return
         ------
@@ -277,8 +337,7 @@ class Retrieval:
             Dictionary containing computed statistics.
         """
         # Threshold cloud
-        cloud = self.solvers_retrieval[wavelength].medium[medium]
-        cloud = threshold_cloud(cloud, extinction_th=extinction_th, tau_th=tau_th)
+        cloud = self.solvers_retrieval[wavelength].medium[medium].copy(deep=True)
 
         # Calculate masked optical depth
         cloud['tau'] = cloud.extinction.integrate(['z'])

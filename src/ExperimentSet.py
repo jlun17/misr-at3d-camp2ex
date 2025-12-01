@@ -49,7 +49,7 @@ class ExperimentSet:
         paths = self._traverse(self.root_dir)
         self.retrievals = {Path(p): None for p in paths}
 
-    def load_retrievals(self, iteration=None):
+    def load_retrievals(self, iteration=None, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
         """
         Instantiate Retrieval objects for each path in self.retrieval_list.
 
@@ -58,12 +58,26 @@ class ExperimentSet:
         iteration : int, optional
             If provided, passed to each Retrieval.load_retrieval call to load a specific iteration.
             If not provided, the last iteration is loaded.
+        extinction_th : list, optional
+            Extinction threshold passed to Retrieval.load_retrieval.
+        tau_th : list, optional
+            Optical depth threshold passed to Retrieval.load_retrieval.
         """
         for rpath in self.retrievals:
             R = Retrieval(rpath)
             if iteration:
-                R.load_retrieval(iteration)
+                R.load_retrieval(iteration, extinction_th=extinction_th, tau_th=tau_th)
             self.retrievals[rpath] = R
+
+    def to_dataframe(self, wavelength, medium, variable, name_map=None):
+        """Convert retrieval results to a dataframe for a given wavelength, medium, and variable"""
+        rows = []
+        for rpath in self.retrievals:
+            R = self.retrievals[rpath]
+            df = R.to_dataframe(wavelength, medium, variable, name_map=name_map)
+            rows.append(df)
+        df = pd.concat(rows, ignore_index=True)
+        return df
 
     def chi2(self, S_1, variable, mask_conds):
         """Compute the chi squared for each retreival and return the results in a dataframe"""
@@ -79,11 +93,11 @@ class ExperimentSet:
         df = pd.DataFrame(rows, columns=[s for s in row])
         return df.set_index('retrieval')
 
-    def cloud_stats(self, wavelength, medium, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
+    def cloud_stats(self, wavelength, medium):
         rows = []
         for rpath in self.retrievals:
             R = self.retrievals[rpath]
-            stats = R.get_cloud_volume_stats(wavelength, medium, extinction_th=extinction_th, tau_th=tau_th)
+            stats = R.get_cloud_volume_stats(wavelength, medium)
             rows.append(stats)
         df = pd.DataFrame(rows, columns=[s for s in stats])
         return df.set_index('retrieval')
