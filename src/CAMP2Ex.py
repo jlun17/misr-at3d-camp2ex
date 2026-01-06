@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 
+FCDP_BIN_NAMES = [f'cbin{i:02d}_fcdp' for i in range(1, 21)]
 FCDP_BINS = np.array([0, 1.5, 3.0, 4.5, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 21.0, 24.0, 27.0, 30.0, 33.0, 36.0, 39.0, 42.0, 46.0, 50.0])
+TDS_BIN_NAMES = [f'cbin{i:02d}_2DS' for i in range(1, 61)]
 TDS_BINS = np.append(
     np.append(
         np.append(
@@ -108,6 +110,17 @@ def calc_Re(N, bins):
     Re = np.sum(n * r**3, axis=-1) / np.sum(n * r**2, axis=-1)
     return Re
 
+## BROKEN: DO NOT USE UNLESS FIXED
+## Need to pay attention to shapes of the arrays.
+## The problem is doing the r-Re calculation.
+# def calc_Ve(N, bins):
+#     Re = calc_Re(N, bins)
+#     n = N * np.diff(bins) # number concentration
+#     bin_center = (bins[:-1] + bins[1:]) / 2
+#     r = bin_center / 2 # bin center radius
+#     Ve = np.sum((r-Re)**2 * r**2 * n, axis=-1) / (Re**2 * np.sum(r**2 * n, axis=-1))
+#     return Ve
+
 def calc_LWC(N, bins):
     """Calculate the liquid water content assuming spherical particles.
     
@@ -212,13 +225,14 @@ def load_FCDP_2DS(fcdp_file, tds_file, nav_file, breakpoint=40, resample='1s'):
     p3[cbins.columns] = cbins.resample(resample).mean()
     p3['Length_m'] = p3['Ground_Speed'].resample(resample).sum()
     # Get the number concentrations
-    fcdp_bin_names = [f'cbin{i:02d}_fcdp' for i in range(1, 21)]
-    fcdp_N = p3[fcdp_bin_names].to_numpy()
-    tds_bin_names = [f'cbin{i:02d}_2DS' for i in range(1, 61)]
-    tds_N = p3[tds_bin_names].to_numpy()
+    # fcdp_bin_names = [f'cbin{i:02d}_fcdp' for i in range(1, 21)]
+    fcdp_N = p3[FCDP_BIN_NAMES].to_numpy()
+    # tds_bin_names = [f'cbin{i:02d}_2DS' for i in range(1, 61)]
+    tds_N = p3[TDS_BIN_NAMES].to_numpy()
     # Calculate things
     N, bins = combine_PSD(fcdp_N, FCDP_BINS, tds_N, TDS_BINS, breakpoint)
     p3['Re'] = calc_Re(N, bins)
+    # p3['Ve'] = calc_Ve(N, bins)
     p3['LWC_gm3'] = calc_LWC(N, bins)
     p3['N_L'] = calc_N(N, bins)
     rho_l = 1e6 # g m^-3
