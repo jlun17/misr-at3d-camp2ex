@@ -4,6 +4,8 @@ import numpy as np
 import xarray as xr
 from pathlib import Path
 
+regionID = 'P{:03d}_R{:05d}_X{:08d}_{:08d}_Y{:07d}_{:07d}'
+
 def convergenceAngle(
         path: int, 
         lat: float,
@@ -50,6 +52,15 @@ def hdf2xr(
     som_x = np.arange(map.som.ulc.x, map.som.lrc.x+res, res)
     som_y = np.arange(map.som.ulc.y, map.som.lrc.y+res, res)
 
+    rID = regionID.format(
+        path,
+        int(res),
+        int(map.som.ulc.x),
+        int(map.som.lrc.x),
+        int(map.som.ulc.y),
+        int(map.som.lrc.y)
+    )
+
     gamma = np.zeros_like(lat)
     for i in range(lat.shape[0]):
         for j in range(lat.shape[1]):
@@ -69,7 +80,8 @@ def hdf2xr(
             path = path,
             orbit = file.orbit,
             block_range = region.block_range(path),
-            resolution = res
+            resolution = res,
+            regionID = rID
         )
     )
     xarr['gamma'].attrs['description'] = 'angle between the positive SOM x-axis and the local east direction'
@@ -127,6 +139,15 @@ def grp2xr(
     som_x = np.arange(map.som.ulc.x, map.som.lrc.x+res, res)
     som_y = np.arange(map.som.ulc.y, map.som.lrc.y+res, res)
 
+    rID = regionID.format(
+        path,
+        int(res),
+        int(map.som.ulc.x),
+        int(map.som.lrc.x),
+        int(map.som.ulc.y),
+        int(map.som.lrc.y)
+    )
+
     gamma = np.zeros_like(lat)
     for i in range(lat.shape[0]):
         for j in range(lat.shape[1]):
@@ -147,7 +168,8 @@ def grp2xr(
             path = path,
             orbit = file.orbit,
             block_range = region.block_range(path),
-            resolution = res
+            resolution = res,
+            regionID = rID
         )
     )
     brf = np.zeros(shape=(len(cam_list), len(som_x), len(som_y)))
