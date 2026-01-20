@@ -131,6 +131,10 @@ if __name__ == '__main__':
         fixed_dataset=cloud_optical_properties[wavelength].drop_vars('extinction')
     )
     cloud_volume_mask = xr.load_dataset(config['cloud_volume_mask_file'])['cloud_volume_mask'].data
+    if(numerical_parameters[wavelength].x_boundary_condition.data == 'open'):
+        cloud_volume_mask[0,:,:] = cloud_volume_mask[-1,:,:] = 0
+    if(numerical_parameters[wavelength].y_boundary_condition.data == 'open'):
+        cloud_volume_mask[:,0,:] = cloud_volume_mask[:,-1,:] = 0
     extinction_coordinate_transform = None
     extinction_state2grid_transform = at3d.transforms.StateToGridMask(mask=cloud_volume_mask)
     extinction_transforms = (extinction_coordinate_transform, extinction_state2grid_transform)
