@@ -163,8 +163,14 @@ class Retrieval:
     def get_geo_thickness(self, wavelength, medium):
         return self.solvers_retrieval[wavelength].medium[medium].geometric_thickness.data
 
+    def get_extinction(self, wavelength, medium):
+        ext = self.solvers_retrieval[0.67].medium['cloud'].extinction.data
+        ext[ext == 0] = np.nan
+        return ext
+
     def calc_CF(self, wavelength, medium):
-        cloud = self.solvers_retrieval[wavelength].medium[medium]
+        cloud = self.solvers_retrieval[wavelength].medium[medium].copy(deep=True)
+        cloud['tau'] = cloud.extinction.integrate('z')
         return ((cloud.tau > 0).sum() / cloud.tau.size).data
     
     def calc_volume(self, wavelength, medium):
