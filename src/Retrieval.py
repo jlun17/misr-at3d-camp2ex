@@ -229,7 +229,7 @@ class Retrieval:
         y = obs_vec(self.obs, variable, self.masks, mask_conds)
         return chi2(y, F, S_1(y))
 
-    def add_ray_containment_mask(self, mask_name='ray_containment'):
+    def add_ray_containment_mask(self, mask_name='ray_containment', bbox_x_low=None, bbox_x_high=None, bbox_y_low=None, bbox_y_high=None):
         """Determine a mask of which rays pass through the retreival domain or not.
         
         Lables each ray with:
@@ -248,6 +248,15 @@ class Retrieval:
             Sets the name of the mask in the self.masks attribute
         """
 
+        if(bbox_x_low is None):
+            bbox_x_low = np.min(self.rte_grid.x.data)
+        if(bbox_x_high is None):
+            bbox_x_high = np.max(self.rte_grid.x.data)
+        if(bbox_y_low is None):
+            bbox_y_low = np.min(self.rte_grid.y.data)
+        if(bbox_y_high is None):
+            bbox_y_high = np.max(self.rte_grid.y.data)
+
         for instrument in self.obs:
             for cam, cam_mask in zip(self.obs[instrument]['sensor_list'], self.masks[instrument]['sensor_list']):
                 phi = np.degrees(cam.ray_phi.data)
@@ -261,10 +270,6 @@ class Retrieval:
                 ray_y_top = cam.ray_y.data
                 ray_x_bot = ray_x_top + deltax
                 ray_y_bot = ray_y_top + deltay
-                bbox_x_low = np.min(self.rte_grid.x.data)
-                bbox_x_high = np.max(self.rte_grid.x.data)
-                bbox_y_low = np.min(self.rte_grid.y.data)
-                bbox_y_high = np.max(self.rte_grid.y.data)
                 top_in = np.logical_and(
                     np.logical_and(ray_x_top > bbox_x_low, ray_x_top < bbox_x_high),
                     np.logical_and(ray_y_top > bbox_y_low, ray_y_top < bbox_y_high)
@@ -278,6 +283,8 @@ class Retrieval:
                 mask[bot_in] += 1
                 cam_mask[mask_name] = (['nrays'], mask)
                 cam_mask[mask_name].attrs['Mask Key'] = '0: Ray neither starts nor finishes within the domain\n1:Ray partially passes through the domain\n2: Ray is fully coontained within the domain' 
+                cam_mask[mask_name].attrs['bbox_x'] = (bbox_x_low, bbox_x_high)
+                cam_mask[mask_name].attrs['bbox_y'] = (bbox_y_low, bbox_y_high)
 
     def add_threshold_mask(self, sensors_th, instrument, mask_name, variable, thresholds):
         """Apply a camera-by-camera threshold mask.
