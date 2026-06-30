@@ -525,10 +525,8 @@ def convert_to_BRF(sensors):
     """
     for instrument in sensors:
         for i, cam in enumerate(sensors[instrument]['sensor_list']):
-            if(cam.I.description == 'I = (BRF_MISR * mu0) / pi = I / F_0'):
-                cam['brf'] = (np.pi * cam.I) / cam.mu0
-            elif(cam.I.description == 'I = BRF_MISR / pi = I /  (mu0 * F_0)'):
-                cam['brf'] = (np.pi * cam.I)
+            # cam['brf'] = (np.pi * cam.I) / cam.mu0
+            cam['brf'] = (np.pi * cam.I)
             sensors[instrument]['sensor_list'][i] = cam
     return sensors
 
