@@ -207,7 +207,7 @@ class Retrieval:
                 df[key] = name_map[self.exp_name][key]
         return df.reset_index().drop(['reff', 'veff'], axis=1, errors='ignore')
 
-    def get_chi2(self, S_1, variable='I', mask_conds={}):
+    def get_chi2(self, S_1, variable='I', mask_conds={}, cam_i=None):
         """Compute chi squared given an inverse error covariance matrix
         
         Parameters
@@ -219,15 +219,26 @@ class Retrieval:
             Observable to comput chi squared on. Typically it is 'I'.
         mask_conds : dict
             Masking conditions to pass to obs_vec.
+        cam_i : list (optional), default: None
+            A list containing the indexes of the cameras to be returned. None retruns all
+            cameras.
         
         Returns
         -------
         chi2 : float
             Chi squared value.
         """
-        F = obs_vec(self.sensors_retrieval, variable, self.masks, mask_conds)
-        y = obs_vec(self.obs, variable, self.masks, mask_conds)
+        F = obs_vec(self.sensors_retrieval, variable, self.masks, mask_conds, cam_i)
+        y = obs_vec(self.obs, variable, self.masks, mask_conds, cam_i)
         return chi2(y, F, S_1(y))
+
+    def get_chi2_by_camera(self, S_1, instrument, variable='I', mask_conds={}):
+        camera = []
+        chi2 = []
+        for i, cam in enumerate(self.obs[instrument]['sensor_list']):
+            camera.append(cam.name)
+            chi2.append(self.get_chi2(S_1, variable, mask_conds, cam_i=[i]))
+        return camera, chi2
 
     def add_ray_containment_mask(self, mask_name='ray_containment', bbox_x_low=None, bbox_x_high=None, bbox_y_low=None, bbox_y_high=None):
         """Determine a mask of which rays pass through the retreival domain or not.
@@ -530,7 +541,7 @@ def convert_to_BRF(sensors):
             sensors[instrument]['sensor_list'][i] = cam
     return sensors
 
-def obs_vec(sensor, variable, masks, mask_conds):
+def obs_vec(sensor, variable, masks, mask_conds, cam_i=None):
     """Convert an observable from a sensor dict into a vector according to a mask.
 
     Parameters
@@ -544,6 +555,9 @@ def obs_vec(sensor, variable, masks, mask_conds):
     mask_conds : dict
         A dictionary where the key is the name of the mask and the value is a tuple
         with equality conditions for the mask. If it is empty, no mask is applied.
+    cam_i : list (optional), default: None
+        A list containing the indexes of the cameras to be returned. None retruns all
+        cameras.
     
     Returns
     -------
@@ -552,7 +566,11 @@ def obs_vec(sensor, variable, masks, mask_conds):
     """
     vec = np.array([])
     for instrument in sensor:
-        for cam, cam_mask in zip(sensor[instrument]['sensor_list'], masks[instrument]['sensor_list']):
+        if(cam_i == None):
+            cam_i = np.arange(len(sensor[instrument]['sensor_list']))
+        for i in cam_i:
+            cam = sensor[instrument]['sensor_list'][i]
+            cam_mask = masks[instrument]['sensor_list'][i]
             mask = np.ones(cam.dims['nrays'], dtype=bool)
             for m in mask_conds:
                 mask = np.logical_and(

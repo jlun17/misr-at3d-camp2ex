@@ -12,4 +12,4 @@
 
 source ~/miniconda3/bin/activate vis2_clone
 
-python /data/keeling/a/johntl3/b/LundstromPub2025/src/veiledCore.py /data/keeling/a/johntl3/b/LundstromPub2025/experiments/CAMP2Ex_RF17/V08/
+python /data/keeling/a/johntl3/b/LundstromPub2025/src/veiledCore.py /data/keeling/a/johntl3/b/LundstromPub2025/experiments/CAMP2Ex_RF17/V11/

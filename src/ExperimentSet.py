@@ -39,6 +39,12 @@ class ExperimentSet:
         # self.retrieval_list = []
         self.retrievals = {}
 
+    def __repr__(self):
+        s = ''
+        for i, name in enumerate(self.retrievals.keys()):
+            s += f'{i+1}: {name}\n'
+        return s
+
     def set_retrieval_list(self):
         """
         Discover retrieval directories under self.root_dir and set self.retrieval_list.
@@ -68,6 +74,12 @@ class ExperimentSet:
             if iteration:
                 R.load_retrieval(iteration, extinction_th=extinction_th, tau_th=tau_th)
             self.retrievals[rpath] = R
+
+    def get_retrieval(self, exp_name):
+        for r in self.retrievals.values():
+            if(r.exp_name == exp_name):
+                return r
+        return None
 
     def to_dataframe(self, wavelength, medium, variable, name_map=None):
         """Convert retrieval results to a dataframe for a given wavelength, medium, and variable"""
