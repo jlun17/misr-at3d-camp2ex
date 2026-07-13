@@ -43,6 +43,11 @@ class HBC:
         self.solver_open = solver_ret_o
         self.solver_control_periodic = solver_control_p
         self.solver_periodic = solver_ret_p
+        self.sensor_true = sensor_true_p
+        self.sensor_control_open = sensor_control_o
+        self.sensor_open = sensor_ret_o
+        self.sensor_control_periodic = sensor_control_p
+        self.sensor_periodic = sensor_ret_p
         self.ext = ext
         self.open_base = open_base
         self.periodic_base = periodic_base
