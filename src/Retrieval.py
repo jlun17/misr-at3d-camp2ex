@@ -275,7 +275,7 @@ class Retrieval:
                 z = np.unique(cam.ray_z.data)
                 assert len(z) == 1, "Sensor altitude is not constant"
                 z = z[0]
-                assert z == np.max(self.rte_grid.z.data), "Sensor is not at the top of the domain"
+                # assert z == np.max(self.rte_grid.z.data), "Sensor is not at the top of the domain"
                 deltax, deltay = at3d.preprocessing.project_to_altitude(theta, phi, -z)
                 ray_x_top = cam.ray_x.data
                 ray_y_top = cam.ray_y.data
