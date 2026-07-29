@@ -59,7 +59,8 @@ if __name__ == '__main__':
     obs = load_sensor_dict(config['obs_file'])
 
     # add sensor uncertainty model
-    uncertainty = at3d.uncertainties.NullUncertainty('L2', scaling_factor=config['error_cov_sf'])
+    inverse_covariance = config['error_cov_sf'] * np.diag(np.ones(4))
+    uncertainty = at3d.uncertainties.Uncertainty(inverse_covariance, 'L2')
     obs.add_uncertainty_model('MISR', uncertainty)
 
     # Make forward sensors
