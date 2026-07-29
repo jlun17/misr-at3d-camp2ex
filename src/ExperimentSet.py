@@ -2,6 +2,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from src.Retrieval import Retrieval, threshold_cloud
+import re
 
 """
 Module: ExperimentSet
@@ -53,7 +54,8 @@ class ExperimentSet:
         The discovery traverses subdirectories recursively.
         """
         paths = self._traverse(self.root_dir)
-        self.retrievals = {Path(p): None for p in paths}
+        pattern = r'high_res'
+        self.retrievals = {Path(p): None for p in paths if not re.search(pattern, str(p))}
 
     def load_retrievals(self, iteration=None, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
         """
