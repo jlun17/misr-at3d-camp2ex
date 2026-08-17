@@ -237,11 +237,56 @@ def load_FCDP_2DS(fcdp_file, tds_file, nav_file, breakpoint=40, resample='1s'):
     p3['N_L'] = calc_N(N, bins)
     rho_l = 1e6 # g m^-3
     p3['ext_km'] = (3*p3['LWC_gm3']) / (2 * rho_l * 1e-9 * p3['Re']) # km^-1
-    p3['q_vs_cb'] = 1e-3 * np.max(p3['Mixing_Ratio'])
-    p3['Virtual_Temp'] = (p3['Static_Air_Temp'] + 273.15) * (1 + 0.61 * p3['Mixing_Ratio'] * 1e-3)
-    p3['ALWC_gm3'] = 1000 * (p3['q_vs_cb'] - 1e-3*p3['Mixing_Ratio']) * ((100 * p3['Static_Pressure']) / (287 * p3['Virtual_Temp']))
-    p3['pct_ALWC'] = 100*p3['LWC_gm3'] / p3['ALWC_gm3']
+    # p3['q_vs_cb'] = 1e-3 * np.max(p3['Mixing_Ratio'])
+    # p3['Virtual_Temp'] = (p3['Static_Air_Temp'] + 273.15) * (1 + 0.61 * p3['Mixing_Ratio'] * 1e-3)
+    # p3['ALWC_gm3'] = 1000 * (p3['q_vs_cb'] - 1e-3*p3['Mixing_Ratio']) * ((100 * p3['Static_Pressure']) / (287 * p3['Virtual_Temp']))
+    # p3['pct_ALWC'] = 100*p3['LWC_gm3'] / p3['ALWC_gm3']
     return p3
+
+def calc_ALWC_df(df, lcl_press, lcl_temp, col_name='ALWC'):
+    cloud_pressures = np.flip(np.unique(df['Static_Pressure'].to_numpy()))
+    cloud_pressures, lwc_volumetric, _ = calc_ALWC(cloud_pressures, lcl_press, lcl_temp)
+    alwc = pd.DataFrame(data={'Static_Pressure': cloud_pressures, col_name: lwc_volumetric})
+    alwc = alwc.set_index('Static_Pressure')
+    df_new = df.join(alwc, on='Static_Pressure', how='left')
+    df_new[f'pct_{col_name}'] = 100 * df_new['LWC_gm3'] / df_new[col_name]
+    return df_new, cloud_pressures, lwc_volumetric
+
+def calc_ALWC(cloud_pressures, lcl_press, lcl_temp):
+    import metpy.calc as mpcalc
+    from metpy.units import units
+
+    lcl_press = lcl_press * units.hPa
+    lcl_temp = lcl_temp * units.degC
+    cloud_pressures = cloud_pressures * units.hPa
+
+    cloud_pressures = np.flip(np.sort(cloud_pressures))
+    assert cloud_pressures[0] <= lcl_press
+
+    if(cloud_pressures[0] != lcl_press):
+        cloud_pressures = np.append(lcl_press, cloud_pressures)
+
+    # 3. Calculate initial water vapor mixing ratio at cloud base
+    w_base = mpcalc.saturation_mixing_ratio(lcl_press, lcl_temp)
+
+    # 4. Define target pressure levels above the cloud base (e.g., inside the cloud)
+    # cloud_pressures = np.linspace(lcl_press.m, 840, 10) * units.hPa
+
+    # 5. Lift the parcel along a moist adiabat to find temperatures at those levels
+    cloud_temps = mpcalc.moist_lapse(cloud_pressures, lcl_temp)
+
+    # 6. Calculate saturation mixing ratio at each level in the cloud
+    w_s = mpcalc.saturation_mixing_ratio(cloud_pressures, cloud_temps)
+
+    # 7. Calculate Adiabatic Liquid Water Content (as mass mixing ratio)
+    # LWC_mixing = w_base - w_s
+    lwc_mixing = (w_base - w_s).to('g/kg')
+
+    # 8. OPTIONAL: Convert to volumetric LWC (g/m^3) using air density
+    density_air = mpcalc.density(cloud_pressures, cloud_temps, w_s)
+    lwc_volumetric = (lwc_mixing * density_air).to('g/m**3')
+
+    return cloud_pressures, lwc_volumetric, lwc_mixing
 
 def VertLinearRegression(p3, x_var='GPS_Altitude', y_var='Re'):
     from sklearn.linear_model import LinearRegression
