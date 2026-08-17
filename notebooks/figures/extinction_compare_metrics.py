@@ -33,8 +33,8 @@ def fcn_pearson_corr(r1, r2):
 def fcn_jaccard(r1, r2):
     r1[np.isnan(r1)] = 0
     r2[np.isnan(r2)] = 0
-    r1 = r1 >= 0.3
-    r2 = r2 >= 0.3
+    r1 = r1 > 0.0
+    r2 = r2 > 0.0
     return 1 - jaccard(np.ravel(r1), np.ravel(r2))
 
 stat_dict = {

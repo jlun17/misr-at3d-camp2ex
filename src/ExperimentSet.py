@@ -77,6 +77,14 @@ class ExperimentSet:
                 R.load_retrieval(iteration, extinction_th=extinction_th, tau_th=tau_th)
             self.retrievals[rpath] = R
 
+    def add_retrieval(self, rpaths, iteration=None, extinction_th=[0, np.inf], tau_th=[0, np.inf]):
+        rpaths = np.atleast_1d(rpaths)
+        for rpath in rpaths:
+            R = Retrieval(rpath)
+            if iteration:
+                R.load_retrieval(iteration, extinction_th=extinction_th, tau_th=tau_th)
+            self.retrievals[rpath] = R
+
     def get_retrieval(self, exp_name):
         for r in self.retrievals.values():
             if(r.exp_name == exp_name):
