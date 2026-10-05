@@ -9,6 +9,7 @@ tmp/
 *.csv
 *.mp4
 *.pptx
+*.npz
 
 # Figures
 *.png
