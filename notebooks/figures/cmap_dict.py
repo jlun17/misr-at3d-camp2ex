@@ -1,5 +1,5 @@
 cmap = {
-    'in situ': 'lime',
+    'in situ': 'cyan',
     'default': 'tab:blue',
     # 'AT3D': 'tab:brown',
     'periodic': 'tab:orange',
