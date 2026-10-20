@@ -16,26 +16,55 @@ Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiomet
 
 ## Summary
 
-| Fig | Notebook | Cell | Retrievals / data | Saved image |
-|---|---|---|---|---|
-| 2 | `notebooks/figures/3Dextinction.ipynb` | idx 4 · In[13] | V11 `default` | `experiments/CAMP2Ex_RF17/V11/figures/3Dextinction/frames/frame00.png` |
-| 3 | `notebooks/figures/extinction.ipynb` | idx 11 · In[15] | V11 default, unconstrained, periodic, surf4p0, aod0p150, aod0p250 | not saved |
-| 4 | `notebooks/figures/chi2.ipynb` | idx 5 · In[6] | V11 default, unconstrained, periodic, surf4p0, aod0p150, aod0p250 | not saved |
-| 5 | `notebooks/figures/ForwardSim_VS_Obs_pub.ipynb` | idx 6 · In[23] | V11 `default` | not saved |
-| 6 | `notebooks/figures/ForwardSim_VS_Obs3.ipynb` | idx 6 · In[7] | V11 CTM_unc, unconstrained, CTP_unc | not saved |
-| 7 | `notebooks/figures/CAMP2Ex_insitu_reduced.ipynb` | idx 12 · In[13] | V11 retrievals + CAMP2Ex P-3B in situ (FCDP, 2DS10, MetNav) | not saved |
-| 8 | `Synthetic/analysis/lundstrom2025_figures.ipynb` | idx 20 · In[11] | Synthetic TradeCumulus LES field | `Synthetic/analysis/lundstrom_et_al_MS_cloud_summaries.png` |
-| 9 | `notebooks/HBC/hbc2.ipynb` | idx 5 · In[37] | Synthetic HBC runs, TradeCumulus | not saved |
-| 10 | `notebooks/HBC/hbc2.ipynb` | idx 6 · In[44] | Synthetic HBC runs, TradeCumulus | not saved |
-| 11 | `notebooks/figures/extinction.ipynb` | idx 13 · In[19] | V11 periodic vs default | not saved |
-| B1 | `notebooks/surface_parameterization_testing/sufrace_parameterization.ipynb` | idx 6 · In[11] | 1D SHDOM runs in `output1D/` | not saved |
+| Fig | Script (`scripts/figures/`) | Image (`figures/manuscript/`) | Source notebook | Cell | Retrievals / data |
+|---|---|---|---|---|---|
+| 2 | `fig02_volume.py` | `fig02_volume.png` | `notebooks/figures/3Dextinction.ipynb` | idx 4 · In[13] | V11 `default` |
+| 3 | `fig03_profiles.py` | `fig03_profiles.png` | `notebooks/figures/extinction.ipynb` | idx 11 · In[15] | V11 default, unconstrained, periodic, surf4p0, aod0p150, aod0p250 |
+| 4 | `fig04_chi2.py` | `fig04_chi2.png` | `notebooks/figures/chi2.ipynb` | idx 5 · In[6] | V11 default, unconstrained, periodic, surf4p0, aod0p150, aod0p250 |
+| 5 | `fig05_brf.py` | `fig05_brf.png` | `notebooks/figures/ForwardSim_VS_Obs_pub.ipynb` | idx 6 · In[23] | V11 `default` |
+| 6 | `fig06_cloudmotion.py` | `fig06_cloudmotion.png` | `notebooks/figures/ForwardSim_VS_Obs3.ipynb` | idx 6 · In[7] | V11 CTM_unc, unconstrained, CTP_unc |
+| 7 | `fig07_insitu.py` | `fig07_insitu.png` | `notebooks/figures/CAMP2Ex_insitu_reduced.ipynb` | idx 12 · In[13] | V11 retrievals + CAMP2Ex P-3B in situ (FCDP, 2DS10, MetNav) |
+| 8 | `fig08_clouds.py` | `fig08_clouds.png` | `Synthetic/analysis/lundstrom2025_figures.ipynb` | idx 20 · In[11] | Synthetic TradeCumulus LES field |
+| 9 | `fig09_hbc.py` | `fig09_hbc.png` | `notebooks/HBC/hbc2.ipynb` | idx 5 · In[37] | Synthetic HBC runs, TradeCumulus |
+| 10 | `fig10_periodic.py` | `fig10_periodic.png` | `notebooks/HBC/hbc2.ipynb` | idx 6 · In[44] | Synthetic HBC runs, TradeCumulus |
+| 11 | `fig11_target.py` | `fig11_target.png` | `notebooks/figures/extinction.ipynb` | idx 13 · In[19] | V11 periodic vs default |
+| B1 | `figB1_surface.py` | `figB1_surface.png` | `notebooks/surface_parameterization_testing/sufrace_parameterization.ipynb` | idx 6 · In[11] | 1D SHDOM runs in `output1D/` |
+| S1, S3, …, S17 (odd) | `figS_volume.py` | `S01_volume_unconstrained.png` … `S17_volume_CTP_unc.png` | `notebooks/figures/3DextinctionSI.ipynb` | idx 4 · In[11] | 9 V11 sensitivity runs (see SI section) |
+| S2, S4, …, S18 (even) | `figS_brf.py` | `S02_brf_unconstrained.png` … `S18_brf_CTP_unc.png` | `notebooks/figures/ForwardSim_VS_Obs_pub.ipynb` | idx 8 · In[30] | same 9 V11 runs |
 
-"Not saved" means no cell writes the image to disk. The figure exists only as the PNG embedded in the
-notebook's stored output.
+The per-figure sections below describe the source notebooks. The scripts are copies of those notebook cells.
+Where a notebook never saved a figure (3, 4, 5, 6, 7, 9, 10, 11, B1), "Output: not saved" refers to the notebook;
+the script saves it.
+
+## Regenerating the figures
+
+Each figure has a script in `scripts/figures/`. The script is copied from its notebook cells with no logic
+changes: unused imports, helper functions, commented-out code and display-only cells are dropped, and a save
+line is added. Scripts that already saved in the notebook keep their own save call, with only the output path
+changed to `figures/manuscript/`.
+
+```bash
+sbatch scripts/figures/run_figures.sh                              # all figures
+sbatch scripts/figures/run_figures.sh fig04_chi2.py fig09_hbc.py   # selected figures
+```
+
+`run_figures.sh` does the following:
+- runs the scripts from `scripts/figures/`, so the notebooks' `PROJECT_ROOT = Path().resolve().parent.parent`
+  still resolves to the repo root;
+- puts `notebooks/figures/` and `notebooks/HBC/` on `PYTHONPATH`, so `cmap_dict`, `extinction_compare_metrics`
+  and `HBC` import unchanged;
+- activates each figure's original conda env: `vis2_clone` for figs 3, 7, 11 and B1, `vis2` for the rest.
+
+Run time and inputs:
+- Most CAMP2Ex scripts load all 22 V11 retrievals.
+- `fig03_profiles.py` and `fig11_target.py` also run the full all-pairs comparison from `extinction.ipynb`
+  cell 7. That cell is kept whole because `Retrieval.get_extinction` modifies the extinction fields in place, so
+  dropping any of its comparisons could change the results.
+- `fig07_insitu.py` needs the `min_optical_path.nc` files produced by `calc_VC.sh`.
 
 ---
 
-## Common loading path for V11 retrievals (Figs 2–7, 11)
+## Common loading path for V11 retrievals (Figs 2–7, 11, S1–S18)
 
 All CAMP2Ex notebooks load the retrievals the same way:
 
@@ -147,10 +176,8 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
   - `data/V11/AT3D_OBS_bbox_..._H1400_U1p3_V2p4.nc`
 - **Code:** `src/Retrieval.py`, `src/ExperimentSet.py`, `src/utils/util.py`,
   `notebooks/figures/figs_to_html.py`.
-- **Output:** not saved.
-  - idx 8 writes `experiments/CAMP2Ex_RF17/V11/figures/AT3D_VS_MISR/frames/frame00–08.png` for the
-    *other* retrievals, but `default` is not in that list.
-  - idx 9 bundles those frames into `.../figures/AT3D_VS_MISR.html`.
+- **Output:** not saved. idx 8 in the same notebook saves the equivalent panels for the nine sensitivity runs
+  (the even-numbered Figures S2–S18), but `default` is not among them.
 
 ## Figure 6: Cloud-motion sensitivity, DF camera
 
@@ -178,9 +205,12 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
   Sources: `['in situ', 'default', 'surf4p0', 'aod0p150', 'aod0p250', 'periodic', 'unconstrained']`.
 - **Retrieval data:**
   - idx 2: the common V11 loading path.
-  - idx 3: for each retrieval, `solvers_retrieval[0.67].medium['cloud'].extinction` and
-    `experiments/CAMP2Ex_RF17/V11/<retrieval>/min_optical_path.nc`.
-  - The shell/core split uses the `default` CVM, `data/V11/CVM_LCL_CTH_SC_R7.nc`.
+  - idx 3: for each retrieval, `solvers_retrieval[0.67].medium['cloud'].extinction`, joined with
+    `experiments/CAMP2Ex_RF17/V11/<retrieval>/min_optical_path.nc` (produced by `calc_VC.sh`; see
+    "Veiled-core optical paths" below).
+  - The default CVM, `data/V11/CVM_LCL_CTH_SC_R7.nc`, provides `distance_to_cloud`.
+  - Shell/core split: a voxel counts as "Cloud Core" when `isVeiled = min_optical_path >= 5`; otherwise it is
+    "Cloud Shell".
 - **In situ data** (idx 4, via `cx.load_FCDP_2DS(..., breakpoint=40, resample='2s')`):
   - `data/raw/CAMP2Ex_SPEC/CAMP2EX-MetNav_P3B_20191001_R0.ict`
   - `data/raw/CAMP2Ex_SPEC/PaulLawson/CAMP2Ex-FCDP_P3B_20191001_R1.ict`
@@ -193,6 +223,7 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
   - `src/CAMP2Ex.py` (`load_FCDP_2DS`)
   - `src/Retrieval.py`, `src/ExperimentSet.py`, `src/utils/util.py`
   - `notebooks/figures/cmap_dict.py`
+  - Upstream: `calc_VC.sh` and `src/veiledCore.py` (produce `min_optical_path.nc`)
 - **Output:** not saved.
 
 ## Figure 8: Synthetic cloud field summary
@@ -274,6 +305,58 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
 
 ---
 
+## Supporting Information: Figures S1–S18
+
+The SI figures come in pairs, one pair per sensitivity run. Within each pair, the odd-numbered figure is the 3D
+extinction field and the even-numbered figure is the forward simulation vs MISR. Both notebooks loop over
+`['unconstrained', 'surf4p0', 'aod0p150', 'aod0p250', 'periodic', 'ATM_unc', 'ATP_unc', 'CTM_unc', 'CTP_unc']`
+and write `frame{i:02d}.png`. So `frameNN` from the 3D extinction notebook is S(2·NN + 1), and `frameNN` from the
+forward-sim notebook is S(2·NN + 2).
+
+| 3D extinction | Forward sim vs MISR | Retrieval | Dir under `V11/` | Final iterate | Plot title |
+|---|---|---|---|---|---|
+| S1 (`frame00`) | S2 (`frame00`) | `unconstrained` | `CVM/unconstrained` | iter040 | unconstrained |
+| S3 (`frame01`) | S4 (`frame01`) | `surf4p0` | `surf_wind/surf4p0` | iter028 | surf4p0 |
+| S5 (`frame02`) | S6 (`frame02`) | `aod0p150` | `aerosol/aod0p150` | iter036 | aod0p150 |
+| S7 (`frame03`) | S8 (`frame03`) | `aod0p250` | `aerosol/aod0p250` | iter051 | aod0p250 |
+| S9 (`frame04`) | S10 (`frame04`) | `periodic` | `HBC/periodic` | iter037 | periodic |
+| S11 (`frame05`) | S12 (`frame05`) | `ATM_unc` | `cloud_motion/ATM_unc` | iter046 | AT− |
+| S13 (`frame06`) | S14 (`frame06`) | `ATP_unc` | `cloud_motion/ATP_unc` | iter044 | AT+ |
+| S15 (`frame07`) | S16 (`frame07`) | `CTM_unc` | `cloud_motion/CTM_unc` | iter051 | CT− |
+| S17 (`frame08`) | S18 (`frame08`) | `CTP_unc` | `cloud_motion/CTP_unc` | iter026 | CT+ |
+
+The obs file, CVM and other inputs for each run are listed in the V11 retrieval table above.
+
+### Figures S1, S3, …, S17: 3D extinction fields of the sensitivity runs
+
+- **Notebook / cell:** `notebooks/figures/3DextinctionSI.ipynb`, idx 4 (In[11]).
+  - Prerequisites: idx 0 (setup, Kaleido temp dir `tmp/kaleido_tmp`), idx 1 (imports), idx 3 (load, In[4]).
+- **Plot:** the same Plotly `go.Volume` rendering as Figure 2, applied to each run's
+  `solvers_retrieval[0.67].medium['cloud'].extinction`.
+  - Settings: isomin 1, isomax 40, opacity 0.1, 30 surfaces, Blues colorscale, 750×650 px, fixed camera.
+  - The cloud-motion runs are titled AT−/AT+/CT−/CT+.
+- **Data:** final iterates of the nine runs listed in the table above.
+- **Code:** `src/ExperimentSet.py`, `src/Retrieval.py`. External: `plotly`, `kaleido`.
+- **Output:** `experiments/CAMP2Ex_RF17/V11/figures/3DextinctionSI/frames/frame00.png` to `frame08.png`, written
+  by `fig.write_image`. idx 5 bundles them into `.../3DextinctionSI/3Dextinction.html` using
+  `notebooks/figures/figs_to_html.py`.
+
+### Figures S2, S4, …, S18: AT3D forward simulation vs MISR for the sensitivity runs
+
+- **Notebook / cell:** `notebooks/figures/ForwardSim_VS_Obs_pub.ipynb`, idx 8 (In[30]).
+  - Prerequisites: idx 1–2 (imports), idx 3 (`plot_F_vs_MISR` and plot settings), idx 4 (load), idx 7
+    (`savekwargs`: png, 300 dpi, tight bounding box).
+- **Plot:** the same 3×9 layout as Figure 5: MISR observed BRF, AT3D simulated BRF and AT3D − MISR for each
+  camera, with the 17.6 km domain border drawn in red. The suptitle names the run.
+- **Data:** for each run, the final iterate (simulated BRF) and its `obs_file` (MISR BRF).
+  - The `_unc` runs use the matching `_H1400_{ATM,ATP,CTM,CTP}.nc` obs file.
+  - All other runs use `_U1p3_V2p4.nc`.
+- **Code:** `src/Retrieval.py`, `src/ExperimentSet.py`, `src/utils/util.py`, `notebooks/figures/figs_to_html.py`.
+- **Output:** `experiments/CAMP2Ex_RF17/V11/figures/AT3D_VS_MISR/frames/frame00.png` to `frame08.png`, written by
+  `plt.savefig`. idx 9 bundles them into `.../figures/AT3D_VS_MISR/AT3D_VS_MISR.html`.
+
+---
+
 ## Upstream provenance of the V11 retrievals
 
 1. **Raw data** (`data/raw/`):
@@ -311,10 +394,29 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
    the original `out_path`. The current `default` and `surf4p0` directories hold the V11b restart runs;
    their configs show `out_path: .../*_restart/`.
 
+### Veiled-core optical paths (`min_optical_path.nc`, used by Fig 7)
+
+- **Job:** `calc_VC.sh`, a Slurm script (12 tasks, 64 GB, conda env `vis2_clone`) that runs
+  `python src/veiledCore.py experiments/CAMP2Ex_RF17/V11/`.
+- **Inputs:** `src/veiledCore.py` loads the whole V11 set through the common loading path (`ExperimentSet`,
+  `iteration=-1`, `extinction_th=[0.3, inf]`), so `*_obsolete` runs are included. For each retrieval it uses
+  the final iterate's cloud extinction at 0.67 µm.
+- **Computation:** for every voxel with extinction > 0, it marches horizontally in 8 azimuths (0°–315°).
+  - The march stays at the voxel's own z.
+  - The step is half the horizontal grid spacing.
+  - Extinction is trilinearly interpolated (`RegularGridInterpolator`; outside the grid it is 0).
+  - The march accumulates extinction × step and stops when extinction drops below 0.3 km⁻¹.
+  - The voxel's value is the **minimum** optical path over the 8 directions. The work runs in parallel with
+    `multiprocessing.Pool`.
+- **Output:** `experiments/CAMP2Ex_RF17/V11/<retrieval>/min_optical_path.nc`. It holds the cloud medium dataset
+  plus a new `min_optical_path` variable (x, y, z).
+
 ## Known issues / caveats
 
-- **Figures with no saved image:** 3, 4, 5, 6, 7, 9, 10, 11 and B1 exist only as embedded notebook output.
-  Adding `savefig` calls would make them reproducible as files.
+- **Notebook outputs vs script outputs:**
+  - In the notebooks, figures 3, 4, 5, 6, 7, 9, 10, 11 and B1 exist only as embedded output.
+  - The notebooks save the SI figures as generic `frameNN.png` files under `experiments/CAMP2Ex_RF17/V11/figures/`.
+  - The scripts in `scripts/figures/` save every figure to `figures/manuscript/` with descriptive names.
 - **`CLAUDE.md` cell numbers:** they mostly correspond to execution counts `In[n]`, not cell positions. For
   example, Figure 11's "cell 19" is idx 13 (In[19]), while idx 19 is an unexecuted histogram cell.
 - **Obsolete runs in the pairwise statistics:** the `*_obsolete` retrievals are loaded and included in the
@@ -323,5 +425,3 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
 - **Stale CSV restart path:** V11b's `restart_iter` for `surf4p0` points at
   `surf_wind/surf4p0/iterations/iter030.nc`. After the renaming, that file is in
   `surf_wind/surf4p0_obsolete/iterations/`.
-- **`min_optical_path.nc` (Fig 7):** this file exists in every retrieval directory, but no notebook traced here
-  generates it.
