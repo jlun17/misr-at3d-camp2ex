@@ -1,6 +1,12 @@
 # Lundstrom2025
 Lundstrom et al. (2025) will demonstrate the practical application of AT3D using a case study from CAMP2Ex and observations from MISR.
 
+## Reproducing the manuscript
+
+- `PIPELINE.md`: rebuild every input file from raw data (`scripts/pipeline/run_pipeline.sh`).
+- `FIGURES.md`: regenerate each figure (`scripts/figures/run_figures.sh`) and trace it to its data.
+- `archive/`: code and data not used by any figure, kept at their original relative paths.
+
 ## Workflow
 
 The following diagram describes the workflow for making an AT3D retreival using observations from MISR.

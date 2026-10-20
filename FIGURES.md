@@ -8,8 +8,11 @@ Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiomet
 - Repo root: `/data/keeling/a/johntl3/b/LundstromPub2025`. In-repo paths below are relative to it.
   `/data/keeling/a/johntl3/b` is the same directory as `/data/gdi/b/johntl3`, which is why notebook
   output sometimes shows `/data/gdi/...` paths.
-- Synthetic experiments (Figs 8–10) live in `/data/keeling/a/johntl3/b/Synthetic`, which is **not** under
-  version control.
+- Synthetic experiments (Figs 8–10) were run in `/data/keeling/a/johntl3/b/Synthetic`, which is **not** under
+  version control. The files the figures read are copied to `data/synthetic/`, and the producer scripts to
+  `scripts/pipeline/synthetic/`.
+- `PIPELINE.md` describes how every input file is rebuilt (`scripts/pipeline/run_pipeline.sh`). Unused code and
+  data are in `archive/`, which mirrors the original paths.
 - **Cell convention:** `idx` is the 0-based cell position in the notebook JSON; `In[n]` is the saved
   execution count. The "cell N" numbers in `CLAUDE.md` mostly match `In[n]` (hbc2 is the exception: they match
   1-based positions there). The two notations are given side by side below.
@@ -24,9 +27,9 @@ Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiomet
 | 5 | `fig05_brf.py` | `fig05_brf.png` | `notebooks/figures/ForwardSim_VS_Obs_pub.ipynb` | idx 6 · In[23] | V11 `default` |
 | 6 | `fig06_cloudmotion.py` | `fig06_cloudmotion.png` | `notebooks/figures/ForwardSim_VS_Obs3.ipynb` | idx 6 · In[7] | V11 CTM_unc, unconstrained, CTP_unc |
 | 7 | `fig07_insitu.py` | `fig07_insitu.png` | `notebooks/figures/CAMP2Ex_insitu_reduced.ipynb` | idx 12 · In[13] | V11 retrievals + CAMP2Ex P-3B in situ (FCDP, 2DS10, MetNav) |
-| 8 | `fig08_clouds.py` | `fig08_clouds.png` | `Synthetic/analysis/lundstrom2025_figures.ipynb` | idx 20 · In[11] | Synthetic TradeCumulus LES field |
-| 9 | `fig09_hbc.py` | `fig09_hbc.png` | `notebooks/HBC/hbc2.ipynb` | idx 5 · In[37] | Synthetic HBC runs, TradeCumulus |
-| 10 | `fig10_periodic.py` | `fig10_periodic.png` | `notebooks/HBC/hbc2.ipynb` | idx 6 · In[44] | Synthetic HBC runs, TradeCumulus |
+| 8 | `fig08_clouds.py` | `fig08_clouds.png` | `Synthetic/analysis/lundstrom2025_figures.ipynb` | idx 20 · In[11] | Synthetic TradeCumulus stochastic cloud field (`data/synthetic/`) |
+| 9 | `fig09_hbc.py` | `fig09_hbc.png` | `notebooks/HBC/hbc2.ipynb` | idx 5 · In[37] | Synthetic HBC runs, TradeCumulus (`data/synthetic/`) |
+| 10 | `fig10_periodic.py` | `fig10_periodic.png` | `notebooks/HBC/hbc2.ipynb` | idx 6 · In[44] | Synthetic HBC runs, TradeCumulus (`data/synthetic/`) |
 | 11 | `fig11_target.py` | `fig11_target.png` | `notebooks/figures/extinction.ipynb` | idx 13 · In[19] | V11 periodic vs default |
 | B1 | `figB1_surface.py` | `figB1_surface.png` | `notebooks/surface_parameterization_testing/sufrace_parameterization.ipynb` | idx 6 · In[11] | 1D SHDOM runs in `output1D/` |
 | S1, S3, …, S17 (odd) | `figS_volume.py` | `S01_volume_unconstrained.png` … `S17_volume_CTP_unc.png` | `notebooks/figures/3DextinctionSI.ipynb` | idx 4 · In[11] | 9 V11 sensitivity runs (see SI section) |
@@ -60,7 +63,7 @@ Run time and inputs:
 - `fig03_profiles.py` and `fig11_target.py` also run the full all-pairs comparison from `extinction.ipynb`
   cell 7. That cell is kept whole because `Retrieval.get_extinction` modifies the extinction fields in place, so
   dropping any of its comparisons could change the results.
-- `fig07_insitu.py` needs the `min_optical_path.nc` files produced by `calc_VC.sh`.
+- `fig07_insitu.py` needs the `min_optical_path.nc` files produced by `calc_VC.sh` (pipeline stage `vc`).
 
 ---
 
@@ -77,7 +80,8 @@ exset.load_retrievals(iteration=-1, extinction_th=[0.3, np.inf])
 
 Code:
 - `src/ExperimentSet.py`: recursively collects every directory under `V11/` that contains an `iterations/`
-  subdirectory, skipping paths that match `high_res`. `*_obsolete` directories **are** loaded. The retrieval
+  subdirectory, skipping paths that match `high_res`. `*_obsolete` directories **are** loaded; after archiving,
+  only `default_obsolete` and `surf_wind/surf4p0_obsolete` remain (the restart sources of `default` and `surf4p0`). The retrieval
   name is the leaf directory name (e.g. `HBC/periodic` → `periodic`).
 - `src/Retrieval.py`: for each retrieval it reads `config.yml`, the last file of
   `sorted(iterations/iter*.nc)` (via `at3d.util.load_forward_model`), the `obs_file`, and the
@@ -104,14 +108,14 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
 | `HBC/periodic` | iter037 | `_U1p3_V2p4` | R7 | `misr_config_periodic.json` | V11a |
 | `surf_wind/surf4p0` | iter028 | `_U1p3_V2p4` | R7 | surface wind 4.0 m/s (restart) | V11b |
 | `CVM/unconstrained` | iter040 | `_U1p3_V2p4` | `CVM_unconstrained_mod.nc` | unconstrained CVM | V11f |
-| `CVM/SC` | iter023 | `_U1p3_V2p4` | `CVM_LCL_CTH_SC_R3_5_6_7.nc` | CVM | V11g |
-| `cloud_motion/{ATM,ATP,CTM,CTP}` | 013 / 019 / 024 / 024 | `_{ATM,ATP,CTM,CTP}` | `CVM_LCL_CTH_SC_R7_{track}.nc` | cloud-motion correction | V11d |
+| `CVM/SC` (archived) | iter023 | `_U1p3_V2p4` | `CVM_LCL_CTH_SC_R3_5_6_7.nc` | CVM | V11g |
+| `cloud_motion/{ATM,ATP,CTM,CTP}` (archived) | 013 / 019 / 024 / 024 | `_{ATM,ATP,CTM,CTP}` | `CVM_LCL_CTH_SC_R7_{track}.nc` | cloud-motion correction | V11d |
 | `cloud_motion/{ATM,ATP,CTM,CTP}_unc` | 046 / 044 / 051 / 026 | `_{track}` | `CVM_unconstrained_mod.nc` | cloud motion + unconstrained CVM | V11f |
 | `default_obsolete` | iter030 | `_U1p3_V2p4` | R7 | superseded by `default` | V11a |
 | `surf_wind/surf4p0_obsolete` | iter030 | `_U1p3_V2p4` | R7 | superseded by `surf4p0` | V11a |
-| `CVM/unconstrained_obsolete` | iter026 | `_U1p3_V2p4` | `CVM_LCL_CTH_SC_R0_1_2_3_4_5_6_7.nc` | superseded by `unconstrained` | V11a |
-| `cloud_motion/*_unc_obsolete` | 025 / 028 / 028 / 014 | `_{track}` | `CVM_LCL_CTH_SC_R0_1_2_3_4_5_6_7.nc` | superseded by `*_unc` | V11e |
-| `high_res` | — | — | `CVM_LCL_CTH_SC_R7_high_res.nc` | excluded by `ExperimentSet` | V11c |
+| `CVM/unconstrained_obsolete` (archived) | iter026 | `_U1p3_V2p4` | `CVM_LCL_CTH_SC_R0_1_2_3_4_5_6_7.nc` | superseded by `unconstrained` | V11a |
+| `cloud_motion/*_unc_obsolete` (archived) | 025 / 028 / 028 / 014 | `_{track}` | `CVM_LCL_CTH_SC_R0_1_2_3_4_5_6_7.nc` | superseded by `*_unc` | V11e |
+| `high_res` (archived) | — | — | `CVM_LCL_CTH_SC_R7_high_res.nc` | excluded by `ExperimentSet` | V11c |
 
 ---
 
@@ -229,11 +233,14 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
 ## Figure 8: Synthetic cloud field summary
 
 - **Notebook / cell:** `/data/keeling/a/johntl3/b/Synthetic/analysis/lundstrom2025_figures.ipynb`, idx 20 (In[11]).
+  The script reads the field from `data/synthetic/`.
   - Prerequisites: idx 0 (imports, `savefigs = True`), idx 1 (`set_labels`), idx 18 (`plot_square`),
     idx 19 (load).
 - **Plot:** 2×2 grid of cloud-top height, cloud mask, liquid water path and optical depth for the Trade Cumulus
   field. Yellow squares mark the 5 km and 17 km domains centred on (74, 74).
-- **Data:** `/data/keeling/a/johntl3/b/Synthetic/IO/thesis/TradeCumulus/len149/ex00_density.nc`, cropped to
+- **Data:** `data/synthetic/thesis/TradeCumulus/len149/ex00_density.nc` (a copy of
+  `Synthetic/IO/thesis/TradeCumulus/len149/ex00_density.nc`, itself identical to
+  `Synthetic/cloud_gen/cloud_fields/TradeCu/density/field07.nc`), cropped to
   71×71 columns around the centre.
   - idx 19 also loads `.../Transition/len149/ex00_density.nc`, but this figure does not use it.
 - **Code:** `/data/keeling/a/johntl3/b/Synthetic/analysis/visualization.py` (imported as `vis`).
@@ -250,8 +257,9 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
   - Rows: adjusted relative RMSD (%) and adjusted relative bias (%) against R − T.
   - Filter: T ≥ 4, R ≥ 6.
 - **Data** (idx 2): `cloud_field = 'TradeCumulus'`, `lens = [5, 7, 9, 11, 15, 19]`.
-  - Periodic runs: `/data/keeling/a/johntl3/b/Synthetic/IO/thesis_periodic_V2/TradeCumulus/len{005..019}/`
-  - Open runs: `/data/keeling/a/johntl3/b/Synthetic/IO/thesis/TradeCumulus/len{005..019}/`
+  - Periodic runs: `data/synthetic/thesis_periodic_V2/TradeCumulus/len{005..019}/` (copied from
+    `Synthetic/IO/thesis_periodic_V2/`)
+  - Open runs: `data/synthetic/thesis/TradeCumulus/len{005..019}/` (copied from `Synthetic/IO/thesis/`)
   - Each directory provides `ex00_syntheticObs.nc` (truth), `ex00em_optimized.nc` (retrieval) and
     `ex00_optimized.nc` (control).
 - **Code:**
@@ -295,7 +303,7 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
 - **Data:** `notebooks/surface_parameterization_testing/output1D/wind{0p67,4p0}_mu{8,16,32,64,128}_phi{16..256}.nc`
   (10 files). Wind speed, n_mu and n_phi are parsed from the file names.
 - **How the data were generated:** idx 3, now commented out, ran 1D SHDOM forward simulations from these yml
-  configs:
+  configs (pipeline stage `b1`, `scripts/pipeline/surface1D/figB1_shdom1d.py`):
   - `configs_expr02_fast/`: the wind 4.0 runs.
   - `configs_expr02_slow/`: the wind 0.67 runs.
   - They use `data/interim/AT3D_OBS_CAMP2Ex_RF17_default.nc`, `MIXTURE_default_ERA5.nc` and
@@ -359,6 +367,9 @@ The obs file, CVM and other inputs for each run are listed in the V11 retrieval 
 
 ## Upstream provenance of the V11 retrievals
 
+`PIPELINE.md` gives the producer of every input file, with the git commit it ran at, and the pipeline that
+rebuilds them. The notes below describe how the original runs were made.
+
 1. **Raw data** (`data/raw/`):
    - MISR L1B2 ellipsoid radiances: `MISR/MISR_AM1_GRP_ELLIPSOID_GM_P117_O105254_{cam}_F03_0024.hdf`.
    - Other MISR products: `GP_GMP` geometry, `TC_CLOUD`, `AS_AEROSOL`, `ACP_MIXTURE`.
@@ -369,8 +380,10 @@ The obs file, CVM and other inputs for each run are listed in the V11 retrieval 
      `AT3D_OBS_bbox_*_H1400_*.nc`. The notebook now writes to `data/V12/`; the V11 obs files in `data/V11/`
      came from an earlier run of it.
    - `CVM_LCL_CTH_SC*.ipynb` produce the `CVM_LCL_CTH_SC_R*.nc` masks.
-   - `data/V11/gen_CVM_unc_mod.ipynb` produces `CVM_unconstrained_mod.nc`.
-   - `Make_RTE_grid.ipynb` produces the RTE grid (`RTG_*`).
+   - `data/V11/gen_CVM_unc_mod.ipynb` produces `CVM_unconstrained_mod.nc` (now in
+     `scripts/pipeline/camp2ex/`; the original is archived).
+   - `RTG_default.nc` came from `MISR_preprocess2.ipynb` (deleted in `8277215`). `Make_RTE_grid.ipynb`
+     (archived) produced only `RTG_high_res.nc`.
    - `ERA5_atmosphere.ipynb`, `MISR_aerosol.ipynb` and `mix_background.ipynb` produce the background
      scatterers (`MIXTURE_*`).
 3. **Job lists:** `automation/job_lists/CAMP2Ex_RF17_V11{a..g}.csv`. Each row is one run.

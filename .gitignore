@@ -7,6 +7,8 @@ tmp/
 *.log
 *.out
 *.csv
+!automation/job_lists/CAMP2Ex_RF17_V11?.csv
+!scripts/pipeline/camp2ex/job_list_V11.csv
 *.mp4
 *.pptx
 *.npz
@@ -416,8 +418,4 @@ FodyWeavers.xsd
 *.msp
 
 # JetBrains Rider
-<<<<<<< HEAD
 *.sln.iml
-=======
-*.sln.iml
->>>>>>> origin/master

@@ -24,7 +24,7 @@ def plot_square(c, r, ax):
     ax.plot([c-w, c+w], [c-w, c-w], 'y')
     ax.plot([c-w, c+w], [c+w, c+w], 'y')
 
-trcu_file = '/data/keeling/a/johntl3/b/Synthetic/IO/thesis/TradeCumulus/len149/ex00_density.nc'
+trcu_file = '../../data/synthetic/thesis/TradeCumulus/len149/ex00_density.nc'
 trcu = xr.load_dataset(trcu_file)
 R = 71
 L = 74 - R//2

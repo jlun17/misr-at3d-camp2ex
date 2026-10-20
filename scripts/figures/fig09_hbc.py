@@ -30,8 +30,8 @@ comparisons = [
 
 lens = [5, 7, 9, 11, 15, 19]
 cloud_field = 'TradeCumulus'
-periodic_bases = [f'/data/keeling/a/johntl3/b/Synthetic/IO/thesis_periodic_V2/{cloud_field}/len{l:03d}/ex00' for l in lens]
-open_bases = [f'/data/keeling/a/johntl3/b/Synthetic/IO/thesis/{cloud_field}/len{l:03d}/ex00' for l in lens]
+periodic_bases = [f'{PROJECT_ROOT}/data/synthetic/thesis_periodic_V2/{cloud_field}/len{l:03d}/ex00' for l in lens]
+open_bases = [f'{PROJECT_ROOT}/data/synthetic/thesis/{cloud_field}/len{l:03d}/ex00' for l in lens]
 df = []
 for pb, ob in zip(periodic_bases, open_bases):
     h = HBC(pb, ob)
