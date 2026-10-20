@@ -1,10 +1,10 @@
-out_path: /data/keeling/a/johntl3/b/LundstromPub2025/experiments/CAMP2Ex_RF17/V11/CVM/unconstrained/
+out_path: experiments/CAMP2Ex_RF17/V11/CVM/unconstrained/
 restart_iter: none
-obs_file: /data/keeling/a/johntl3/b/LundstromPub2025/data/V11/AT3D_OBS_bbox_O105254_P117_R00275_X17950487_18003012_Y0193187_0245712_H1400_U1p3_V2p4.nc
-rte_grid_file: /data/keeling/a/johntl3/b/LundstromPub2025/data/interim/RTG_default.nc
-background_scatterers_file: /data/keeling/a/johntl3/b/LundstromPub2025/data/interim/MIXTURE_default_ERA5.nc
-cloud_volume_mask_file: /data/keeling/a/johntl3/b/LundstromPub2025/data/V11/CVM_unconstrained_mod.nc
-config_file_name: /data/keeling/a/johntl3/b/LundstromPub2025/configs/misr_config.json
+obs_file: data/V11/AT3D_OBS_bbox_O105254_P117_R00275_X17950487_18003012_Y0193187_0245712_H1400_U1p3_V2p4.nc
+rte_grid_file: data/interim/RTG_default.nc
+background_scatterers_file: data/interim/MIXTURE_default_ERA5.nc
+cloud_volume_mask_file: data/V11/CVM_unconstrained_mod.nc
+config_file_name: configs/misr_config.json
 surface_wind_speed: 0.67
 a: 2.86
 b: 6.14

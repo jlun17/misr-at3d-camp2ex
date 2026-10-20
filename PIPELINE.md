@@ -16,12 +16,23 @@ recovered from the existing data files, and the rebuilt files match the original
 
 ## Running it
 
+First create the six conda environments: `envs/create_envs.sh` (see `envs/README.md`).
+
 ```bash
-# On the login node; the script only writes retrieval configs and submits Slurm jobs.
+# With Slurm: the script only writes retrieval configs and submits jobs, so it can run on a login node.
 scripts/pipeline/run_pipeline.sh --out-root /path/to/build                 # everything
 scripts/pipeline/run_pipeline.sh --out-root /path/to/build --stages pre,b1 # selected stages
-scripts/pipeline/run_pipeline.sh --out-root /path/to/build --dry-run       # print sbatch commands only
+scripts/pipeline/run_pipeline.sh --out-root /path/to/build --dry-run       # print the commands only
+# Without Slurm: every step runs in order in the current shell.
+scripts/pipeline/run_pipeline.sh --out-root /path/to/build --local
 ```
+
+- Conda is found with `conda info --base`; set `CONDA_BASE` to use another installation.
+- Site-specific Slurm options come from sbatch's own environment variables, e.g.
+  `export SBATCH_PARTITION=node SBATCH_MAIL_USER=you@example.org SBATCH_MAIL_TYPE=END,FAIL`.
+  Each job asks for 4 tasks (12 for `vc`), 64 GB and up to 10 days.
+- With `--local`, each step's log goes to `<out-root>/logs/pipeline/<step>.out`, and the run stops at
+  the first failing step.
 
 - `--out-root` is where `data/`, `mie_tables/`, `experiments/` and `output1D/` are written. If it is
   not the repo root, the pipeline inputs (below) are symlinked in from the repo.
@@ -31,7 +42,7 @@ scripts/pipeline/run_pipeline.sh --out-root /path/to/build --dry-run       # pri
   submitted only when `--out-root` is the repo root.
 - Stages: `pre`, `retrievals`, `vc`, `synthetic`, `b1`, `figures`. A stage run without its upstream
   stage assumes the upstream outputs already exist under `--out-root`.
-- Job logs go to `<out-root>/logs/pipeline/`. Retrieval logs (`at3d.log`, `slurm-*.out`) go to each
+- Slurm job logs go to `<out-root>/logs/pipeline/`. Retrieval logs (`at3d.log`, `slurm-*.out`) go to each
   retrieval directory, as before.
 
 Approximate wall time on Keeling `node`:
@@ -113,7 +124,10 @@ commit removed. It reads `C/job_list_V11.csv` and writes `config.yml` and `run_a
 | `CVM/unconstrained` | V11f | |
 | `cloud_motion/{ATM,ATP,CTM,CTP}_unc` | V11f | |
 
-The original V11 job lists are kept in `automation/job_lists/CAMP2Ex_RF17_V11{a..g}.csv`. Their paths
+The original V11 job lists are kept in `automation/job_lists/CAMP2Ex_RF17_V11{a..g}.csv`, and each
+archived retrieval directory keeps its original `run_at3d.sh`. Both are job records from Keeling, with
+absolute paths; the pipeline regenerates both. The archived `config.yml` files were changed only to
+repo-relative paths, so `src/Retrieval.py` can load the retrievals from any clone. Their paths
 predate the renames `default` → `default_obsolete`, `default_restart` → `default`, and likewise for
 `surf4p0`. That is why the `restart_iter` in the existing `default/config.yml` no longer points at the
 file the run actually restarted from. `job_list_V11.csv` uses the final names, and resolves the restart
@@ -204,6 +218,8 @@ variable, dimension and attribute in every netCDF group.
 | `data/synthetic/thesis_periodic_V2/TradeCumulus/len005/ex00_syntheticObs.nc` | identical |
 | `data/synthetic/thesis/TradeCumulus/len005/ex00_syntheticObs.nc` | identical except cloud `legcoef` ≤ 3.8e-37 (radiances identical); originally run in `at3d_pure` |
 | All 29 figures, re-rendered after archiving and the path edits | pixel-identical to renders made before archiving |
+| `pre` stage with `--local`, and with `at3d_pure_k9` rebuilt from `envs/` | same results as above |
+| Fig 4 rendered with `vis2` rebuilt from `envs/` | pixel-identical |
 
 ## Archive
 

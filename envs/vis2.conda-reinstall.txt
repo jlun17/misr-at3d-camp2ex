@@ -1,0 +1,9 @@
+@EXPLICIT
+https://conda.anaconda.org/conda-forge/linux-64/contourpy-1.2.1-py310hd41b1e2_0.conda#60ee50b1968f802f2a487ba36d4cce0d
+https://conda.anaconda.org/conda-forge/linux-64/fonttools-4.51.0-py310h2372a71_0.conda#1a4773624145c15b92820fe6c87c5fcd
+https://conda.anaconda.org/conda-forge/linux-64/matplotlib-base-3.8.4-py310h62c0568_0.conda#bdfa3aee52579c6b3dde12f52e266ef2
+https://conda.anaconda.org/conda-forge/linux-64/numpy-1.26.4-py310hb13e2d6_0.conda#6593de64c935768b6bad3e19b3e978be
+https://conda.anaconda.org/conda-forge/noarch/packaging-24.0-pyhd8ed1ab_0.conda#248f521b64ce055e7feae3105e7abeb8
+https://conda.anaconda.org/conda-forge/linux-64/pandas-2.2.2-py310hcc13569_0.conda#96910063174ce34fc15609081efc3e5d
+https://conda.anaconda.org/conda-forge/noarch/python-dateutil-2.9.0-pyhd8ed1ab_0.conda#2cf4264fffb9e6eff6031c5b6884d61c
+https://conda.anaconda.org/conda-forge/linux-64/scipy-1.13.0-py310h93e2701_1.conda#4a9ff9702042bbccfe40c8bdacb479fa

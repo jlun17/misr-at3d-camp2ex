@@ -1,15 +1,23 @@
 #!/bin/bash
 
 #SBATCH --job-name=VC
-#SBATCH -p node
 #SBATCH -n 12
 #SBATCH --mem 64GB
 #SBATCH --time=10-00:00:00
-#SBATCH --mail-type=BEGIN
-#SBATCH --mail-type=FAIL
-#SBATCH --mail-type=END
-#SBATCH --mail-user=johntl3@illinois.edu
 
-source ~/miniconda3/bin/activate vis2_clone
+# min_optical_path.nc for every V11 retrieval (Fig 7); the pipeline's `vc` stage runs the same command.
+# Submit from the repository root (or set PROJECT_ROOT). Conda comes from $CONDA_BASE (default
+# `conda info --base`); partition and mail options from SBATCH_PARTITION, SBATCH_MAIL_USER, ...
 
-python /data/keeling/a/johntl3/b/LundstromPub2025/src/veiledCore.py /data/keeling/a/johntl3/b/LundstromPub2025/experiments/CAMP2Ex_RF17/V11/
+if [ -z "$PROJECT_ROOT" ]; then
+    if [ -n "$SLURM_JOB_ID" ]; then
+        PROJECT_ROOT=$SLURM_SUBMIT_DIR
+    else
+        PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    fi
+fi
+[ -f "$PROJECT_ROOT/src/veiledCore.py" ] || { echo "Not the repository root: $PROJECT_ROOT"; exit 1; }
+
+source "${CONDA_BASE:-$(conda info --base)}/bin/activate" vis2_clone
+
+python $PROJECT_ROOT/src/veiledCore.py $PROJECT_ROOT/experiments/CAMP2Ex_RF17/V11/

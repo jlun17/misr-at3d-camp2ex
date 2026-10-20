@@ -1,24 +1,32 @@
 #!/bin/bash
 
 #SBATCH --job-name=figures
-#SBATCH -p node
 #SBATCH -n 4
 #SBATCH --mem 64GB
 #SBATCH --time=2-00:00:00
-#SBATCH --mail-type=BEGIN
-#SBATCH --mail-type=FAIL
-#SBATCH --mail-type=END
-#SBATCH --mail-user=johntl3@illinois.edu
 
 # Regenerate manuscript figures into figures/manuscript/.
 #   sbatch scripts/figures/run_figures.sh                          # all figures
 #   sbatch scripts/figures/run_figures.sh fig04_chi2.py fig09_hbc.py  # selected figures
+#   bash scripts/figures/run_figures.sh                            # without Slurm
+#
+# Submit from the repository root (or set PROJECT_ROOT): under sbatch the script runs from a spooled copy,
+# so its own location does not identify the repository. Conda comes from $CONDA_BASE
+# (default `conda info --base`); partition and mail options from SBATCH_PARTITION, SBATCH_MAIL_USER, ...
 #
 # The scripts are copied from the figure notebooks and, like them, locate the repository with
 # Path().resolve().parent.parent and import helper modules that live next to the notebooks.
 # This wrapper therefore runs them from scripts/figures/ with those notebook directories on PYTHONPATH.
 
-PROJECT_ROOT=/data/keeling/a/johntl3/b/LundstromPub2025
+if [ -z "$PROJECT_ROOT" ]; then
+    if [ -n "$SLURM_JOB_ID" ]; then
+        PROJECT_ROOT=$SLURM_SUBMIT_DIR
+    else
+        PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+    fi
+fi
+[ -f "$PROJECT_ROOT/scripts/figures/run_figures.sh" ] || { echo "Not the repository root: $PROJECT_ROOT"; exit 1; }
+CONDA_BASE=${CONDA_BASE:-$(conda info --base)}
 SCRIPT_DIR=$PROJECT_ROOT/scripts/figures
 
 cd $SCRIPT_DIR
@@ -59,7 +67,7 @@ for s in "${scripts[@]}"; do
         continue
     fi
     echo "=== $s ($env) $(date)"
-    source ~/miniconda3/bin/activate $env
+    source "$CONDA_BASE/bin/activate" $env
     python $s || failed+=("$s")
 done
 

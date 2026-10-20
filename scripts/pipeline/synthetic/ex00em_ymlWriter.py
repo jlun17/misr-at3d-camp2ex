@@ -1,7 +1,7 @@
 import yaml
 import os
 
-# Synthetic data root (was /data/keeling/a/johntl3/b/Synthetic); see scripts/pipeline/synthetic/run_synthetic.sh
+# Synthetic data root (was /data/keeling/a/johntl3/b/Synthetic); set by scripts/pipeline/run_pipeline.sh
 SYN = os.path.join(os.environ.get('OUT_ROOT', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')), 'data', 'synthetic')
 
 y = {}
