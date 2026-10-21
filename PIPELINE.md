@@ -190,6 +190,29 @@ The job layout follows `Synthetic/IO/thesis/batch_writer.ipynb` (open) and
 `configs_expr02_slow` and `configs_expr02_fast`, runs in `vis2_clone`, and writes
 `notebooks/surface_parameterization_testing/output1D/`.
 
+## Data record
+
+`scripts/release/make_data_record.py OUT_DIR` packs the processed and retrieval files that the figures
+and the later pipeline stages read into `LundstromPub2025_data_record.tar.gz`, which unpacks into the
+repository root, with `DATA_RECORD.sha256` alongside and inside it. After unpacking,
+`scripts/release/verify_data_record.sh` checks every file. With the data record unpacked and the CAMP2Ex
+in situ files downloaded, `scripts/figures/run_figures.sh` makes every figure without running the
+pipeline.
+
+| Contents | Why |
+|---|---|
+| `experiments/CAMP2Ex_RF17/V11/<run>/`: the final `iterations/iterNNN.nc`, `min_optical_path.nc`, `loss.csv`, `at3d.log` for the 10 retrievals and the two `*_obsolete` first attempts | figures (`src/Retrieval.py` reads only the final iterate); the logs record convergence |
+| `data/V11/` | observations and cloud volume masks the retrievals and figures read |
+| `data/interim/`, `data/raw/MISR/MISR_AM1_ACP_MIXTURE_F06_0022.nc` | intermediate files, so retrievals can be rerun without the `pre` stage |
+| `mie_tables/red_mie_table.nc` | the Water Mie table the retrievals used (a rebuild differs at float32 rounding) |
+| `data/synthetic/` | the synthetic cloud field and atmosphere (no download exists), and the files Figs 9 and 10 read |
+| `notebooks/surface_parameterization_testing/output1D/` | Fig B1 |
+
+Not included: the raw MISR, ERA5 and CAMP2Ex files that `scripts/download/` fetches, everything tracked
+in git (e.g. the retrievals' `config.yml`), the other iterates of each retrieval, and `archive/`.
+
+Size: 120 files, 1.12 GB unpacked, 166 MB compressed (2026-10-21).
+
 ## Deviations from the original runs
 
 **[FLAGGED] parameters.** No committed notebook state records these; each was recovered from the
@@ -249,6 +272,7 @@ variable, dimension and attribute in every netCDF group.
 | All 29 figures, re-rendered after archiving and the path edits | pixel-identical to renders made before archiving |
 | `pre` stage with `--local`, and with `at3d_pure_k9` rebuilt from `envs/` | same results as above |
 | Fig 4 rendered with `vis2` rebuilt from `envs/` | pixel-identical |
+| Fresh `git clone` + data record + `download_camp2ex.sh` + `run_figures.sh` (2026-10-21) | all 120 data record files verified; all 29 figures pixel-identical |
 
 ## Archive
 
