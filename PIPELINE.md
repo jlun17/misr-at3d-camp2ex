@@ -72,9 +72,12 @@ These are the only files no script produces. Everything else is rebuilt.
 `synthetic/s00_generate_cloud.py` reproduces that code, but a new run draws a different field, so the
 original is a pipeline input. The driver does not run `s00_generate_cloud.py`.
 
-No script downloads the raw data. The files are the MISR L1B2 ellipsoid (GRP_ELLIPSOID_GM, F03_0024),
-geometric parameters (GP_GMP), TC_CLOUD and ACP mixture products for path 117, orbit 105254 (2019-10-02);
-ERA5 pressure-level and single-level data; and the CAMP2Ex P-3B RF17 merges.
+The 12 MISR files come from the NASA Langley ASDC: the L1B2 ellipsoid radiances (GRP_ELLIPSOID_GM,
+F03_0024), geometric parameters (GP_GMP), TC_CLOUD and ACP mixture products, for path 117, orbit 105254
+(2019-10-02). `scripts/download/download_misr.sh` downloads them into `data/raw/MISR/` (NASA Earthdata
+Login required) and checks them against `scripts/download/MISR.sha256`, the checksums of the files used
+for the manuscript. The ERA5 pressure-level and single-level data and the CAMP2Ex P-3B RF17 merges have
+no download script yet.
 
 ## Stages
 
