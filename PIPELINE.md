@@ -76,8 +76,10 @@ The 12 MISR files come from the NASA Langley ASDC: the L1B2 ellipsoid radiances 
 F03_0024), geometric parameters (GP_GMP), TC_CLOUD and ACP mixture products, for path 117, orbit 105254
 (2019-10-02). `scripts/download/download_misr.sh` downloads them into `data/raw/MISR/` (NASA Earthdata
 Login required) and checks them against `scripts/download/MISR.sha256`, the checksums of the files used
-for the manuscript. The ERA5 pressure-level and single-level data and the CAMP2Ex P-3B RF17 merges have
-no download script yet.
+for the manuscript. `scripts/download/download_camp2ex.sh` downloads the three CAMP2Ex P-3B in situ files
+for Fig 7 (MetNav, FCDP, 2DS10) from the NASA Langley airborne science archive into
+`data/raw/CAMP2Ex_SPEC/` (no login needed) and checks them against `scripts/download/CAMP2Ex.sha256`.
+The ERA5 pressure-level and single-level data have no download script yet.
 
 ## Stages
 
