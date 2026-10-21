@@ -328,7 +328,7 @@ forward-sim notebook is S(2·NN + 2).
 | S5 (`frame02`) | S6 (`frame02`) | `aod0p150` | `aerosol/aod0p150` | iter036 | aod0p150 |
 | S7 (`frame03`) | S8 (`frame03`) | `aod0p250` | `aerosol/aod0p250` | iter051 | aod0p250 |
 | S9 (`frame04`) | S10 (`frame04`) | `periodic` | `HBC/periodic` | iter037 | periodic |
-| S11 (`frame05`) | S12 (`frame05`) | `ATM_unc` | `cloud_motion/ATM_unc` | iter046 | AT− |
+| S11 (`frame05`) | S12 (`frame05`) | `ATM_unc` | `cloud_motion/ATM_unc` | iter046 (not converged; the pipeline restarts it, see `PIPELINE.md`) | AT− |
 | S13 (`frame06`) | S14 (`frame06`) | `ATP_unc` | `cloud_motion/ATP_unc` | iter044 | AT+ |
 | S15 (`frame07`) | S16 (`frame07`) | `CTM_unc` | `cloud_motion/CTM_unc` | iter051 | CT− |
 | S17 (`frame08`) | S18 (`frame08`) | `CTP_unc` | `cloud_motion/CTP_unc` | iter026 | CT+ |

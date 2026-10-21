@@ -3,7 +3,7 @@
 `scripts/pipeline/` rebuilds every file the manuscript figures read, starting from raw MISR, ERA5 and
 CAMP2Ex data, and then regenerates the figures. It covers:
 - the observation files, cloud volume masks (CVMs), RTE grid and background scatterers;
-- the 12 V11 retrievals the figures use;
+- the 10 V11 retrievals the figures use, restarted automatically when they do not converge;
 - `min_optical_path.nc` (Fig 7);
 - the synthetic HBC experiments (Figs 8–10);
 - the 1D surface simulations (Fig B1).
@@ -47,7 +47,7 @@ scripts/pipeline/run_pipeline.sh --out-root /path/to/build --local
 
 Approximate wall time on Keeling `node`:
 - `pre`: under 30 min.
-- Each retrieval: 1.5–19 h. `default` and `surf4p0` are two runs in sequence.
+- Each retrieval: 1.5–19 h per attempt; a restarted retrieval runs two attempts in the same job.
 - `vc`: about 1 h.
 - `synthetic`: the 149 km SHDOM run plus 24 small retrievals.
 - `b1`: about 1 h.
@@ -106,23 +106,39 @@ The observation winds:
 - The `[suffix]` argument writes the track files under their final names. The original files were
   renamed by hand from the `U…_V…` names the notebook writes.
 
-### `retrievals`: the 12 V11 retrievals
+### `retrievals`: the 10 V11 retrievals
 
 `C/s10_make_configs.py` is the config writer from `automation/csv2yml.ipynb`, with sbatch and the git
 commit removed. It reads `C/job_list_V11.csv` and writes `config.yml` and `run_at3d.sh` into each
-`experiments/CAMP2Ex_RF17/V11/<run>/`. The driver then submits each `run_at3d.sh`, which runs
-`src/main/run_at3d.py` (unchanged) in `at3d_pure_k9`.
+`experiments/CAMP2Ex_RF17/V11/<run>/`. The driver then submits each `run_at3d.sh` (all 10 in parallel).
+Each one runs `src/main/run_at3d.py` (unchanged) in `at3d_pure_k9` through `C/run_until_converged.sh`:
 
-| Run | Original job list | Notes |
+- **Converged:** `at3d.log` contains L-BFGS-B's `CONVERGENCE: ...` message. The run is done.
+- **Not converged** (in V11, always `ABNORMAL_TERMINATION_IN_LNSRCH`): the attempt is moved to
+  `<run>_obsolete`, and a second attempt runs in `<run>/` with `restart_iter` set to the last
+  `iterations/iter*.nc` of the first. `run_at3d.py` takes that iterate's cloud extinction as its initial
+  state and starts a fresh L-BFGS-B, numbering iterations from iter000 again.
+- **Restart limit:** `MAX_RESTARTS` (default 1). When it is used up, the last attempt is kept whether or not
+  it converged. Further attempts are named `<run>_obsolete2`, `<run>_obsolete3`, ...
+- **Logs:** the Slurm log (`slurm-<job>.out`) is opened before the first attempt starts, so it moves with
+  that attempt to `<run>_obsolete`.
+
+This replaces the hand-made V11 restarts. `default` and `surf4p0` both ended at iter030 on an abnormal
+line search, were renamed to `*_obsolete`, and were restarted from iter030 into new directories (job list
+V11b) that were then renamed to the final names. The rule reproduces that layout. It also applies to
+**`cloud_motion/ATM_unc`**: that run ended non-converged too (iter046), but was not restarted in V11, and
+the published Figs S11 and S12 show that iterate. The pipeline restarts it, so its `ATM_unc` is expected to
+differ from the published one.
+
+| Run | Original job list | V11 outcome |
 |---|---|---|
-| `default_obsolete` | V11a (`default/`) | stage 1 of `default` |
-| `default` | V11b (`default_restart/`) | restarts from the last iterate of `default_obsolete` (originally iter030) |
-| `aerosol/aod0p150`, `aerosol/aod0p250` | V11a | |
-| `HBC/periodic` | V11a | `misr_config_periodic.json` |
-| `surf_wind/surf4p0_obsolete` | V11a (`surf_wind/surf4p0/`) | stage 1 of `surf4p0` |
-| `surf_wind/surf4p0` | V11b (`surf_wind/surf4p0_restart/`) | restarts from the last iterate of `surf4p0_obsolete` (originally iter030) |
-| `CVM/unconstrained` | V11f | |
-| `cloud_motion/{ATM,ATP,CTM,CTP}_unc` | V11f | |
+| `default` | V11a, then the V11b restart | not converged at iter030; restart converged at iter032 |
+| `aerosol/aod0p150`, `aerosol/aod0p250` | V11a | converged |
+| `HBC/periodic` | V11a | converged (`misr_config_periodic.json`) |
+| `surf_wind/surf4p0` | V11a, then the V11b restart | not converged at iter030; restart converged at iter028 |
+| `CVM/unconstrained` | V11f | converged |
+| `cloud_motion/ATM_unc` | V11f | **not converged at iter046; not restarted** |
+| `cloud_motion/{ATP,CTM,CTP}_unc` | V11f | converged |
 
 The original V11 job lists are kept in `automation/job_lists/CAMP2Ex_RF17_V11{a..g}.csv`, and each
 archived retrieval directory keeps its original `run_at3d.sh`. Both are job records from Keeling, with
@@ -130,13 +146,13 @@ absolute paths; the pipeline regenerates both. The archived `config.yml` files w
 repo-relative paths, so `src/Retrieval.py` can load the retrievals from any clone. Their paths
 predate the renames `default` → `default_obsolete`, `default_restart` → `default`, and likewise for
 `surf4p0`. That is why the `restart_iter` in the existing `default/config.yml` no longer points at the
-file the run actually restarted from. `job_list_V11.csv` uses the final names, and resolves the restart
-file when the job starts.
+file the run actually restarted from. `run_until_converged.sh` writes the moved attempt's own path into its
+`config.yml`.
 
 ### `vc`: `min_optical_path.nc` (Fig 7)
 
 `src/veiledCore.py` runs over every retrieval in `experiments/CAMP2Ex_RF17/V11/`, as `calc_VC.sh` does
-(env `vis2_clone`, 12 tasks). It runs after all 12 retrievals finish.
+(env `vis2_clone`, 12 tasks), including any `*_obsolete` attempts. It runs after all 10 retrievals finish.
 
 ### `synthetic`: HBC experiments (Figs 9, 10)
 
@@ -176,6 +192,10 @@ files themselves.
 - `s06`: input `ATMOS_ERA5_CAMP2Ex_RF17_default.nc` and output `MIXTURE_default_ERA5*.nc`. The committed
   notebook uses the dropsonde atmosphere and `MIXTURE_default.nc`.
 
+**Restart rule.** Non-converged retrievals are restarted automatically (see `retrievals`). In V11,
+`cloud_motion/ATM_unc` was left non-converged; the pipeline restarts it, so it is not expected to
+reproduce the published Figs S11 and S12.
+
 **Conda environments that changed since the original runs.**
 - `misr` no longer has `pyhdf`, so `s01` uses the `pyhdf` env.
 - `at3d_pure` no longer imports at3d: `libgfortran.so.3` is missing on Keeling. It ran the 2024
@@ -186,8 +206,8 @@ files themselves.
 - **Retrieval stopping point.** `run_at3d.py` stops L-BFGS-B on `ftol` or an abnormal line search.
   `maxiter=100` is hard-coded and never reached. A rerun is deterministic on the same node type and
   software stack. On different hardware it can stop at a different iteration than the archived runs
-  (e.g. `default` at iter032). This includes the two stage-1 runs, which originally ended at iter030
-  on an abnormal line search.
+  (e.g. `default` at iter032). Whether a run converges or is restarted can change too, since it depends
+  on how the line search ends.
 - **Water Mie table.** The rebuilt `red_mie_table.nc` matches the existing one in `extinction`,
   `scatter` and `nleg`. `legendre` differs in 2 % of entries by at most 1.2e-7 relative, which is
   float32 rounding. The existing table predates the repository, and `run_at3d.py` loads whichever table

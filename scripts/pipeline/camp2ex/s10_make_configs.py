@@ -11,8 +11,9 @@ Changes:
 - sbatch submission and the git commit are removed; run_pipeline.sh submits the jobs with dependencies.
 - The job header drops the partition and mail options (sbatch takes them from SBATCH_PARTITION,
   SBATCH_MAIL_USER, ...), and conda is activated from $CONDA_BASE (default `conda info --base`).
-- A restart_iter ending in /LAST is resolved when the job starts to the last iterations/iter*.nc of the
-  stage-1 run. The original restarts used iter030, which was that run's last iterate.
+- run_at3d.sh runs src/main/run_at3d.py through run_until_converged.sh, which restarts a retrieval from
+  its last iterate when L-BFGS-B does not converge (the V11 restarts of default and surf4p0 were made by
+  hand).
 """
 import csv
 import yaml
@@ -50,20 +51,10 @@ def header(name, n, mem, time):
     string += '#SBATCH --time={}\n\n'.format(time)
     return string
 
-def runPython(condaEnv, script, args, output=None):
+def runRetrieval(condaEnv, out_path):
     string = 'source "${{CONDA_BASE:-$(conda info --base)}}/bin/activate" {}\n\n'.format(condaEnv)
-    string += 'python {}'.format(script)
-    for arg in args:
-        string += ' {}'.format(arg)
-    if(output != None):
-        string += ' > {}'.format(output)
-    string += '\n'
-    return string
-
-def resolveRestart(restart_iter, config_file):
-    stage1_iterations = os.path.dirname(restart_iter)
-    string = 'LAST=$(cd {} && ls {}/iter*.nc | sort | tail -n 1)\n'.format(PROJECT_ROOT, stage1_iterations)
-    string += 'sed -i "s#^restart_iter: .*#restart_iter: $LAST#" {}\n\n'.format(config_file)
+    string += 'export PROJECT_ROOT={}\n'.format(PROJECT_ROOT)
+    string += 'bash {} {}\n'.format(PROJECT_ROOT / 'scripts' / 'pipeline' / 'camp2ex' / 'run_until_converged.sh', out_path)
     return string
 
 def config_path(path):
@@ -85,7 +76,6 @@ config = csv_to_dict(csv_file)
 floats = ['surface_wind_speed', 'a', 'b', 'error_cov_sf']
 paths = ['out_path', 'obs_file', 'rte_grid_file', 'background_scatterers_file', 'cloud_volume_mask_file']
 conda_env = 'at3d_pure_k9'
-at3d_script = PROJECT_ROOT / 'src' / 'main' / 'run_at3d.py'
 for d in config:
     for f in floats:
         d[f] = float(d[f])
@@ -105,11 +95,7 @@ for d in config:
 
     ## Write shell scripts
     name = os.path.basename(out_path[0:-1])
-    args = ['{}config.yml'.format(out_path)]
-    logfile = '{}at3d.log'.format(out_path)
     hdr = header(name, '4', '64GB', '10-00:00:00')
-    body = runPython(conda_env, at3d_script, args, logfile)
-    if(d['restart_iter'].endswith('/LAST')):
-        body = resolveRestart(d['restart_iter'], args[0]) + body
+    body = runRetrieval(conda_env, out_path)
     shell_file = '{}run_at3d.sh'.format(out_path)
     writeBatch(hdr+body, shell_file)

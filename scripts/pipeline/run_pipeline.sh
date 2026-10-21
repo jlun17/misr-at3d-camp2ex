@@ -14,14 +14,16 @@
 #
 # Environment:
 #   CONDA_BASE      conda installation holding the envs in envs/ (default: `conda info --base`).
+#   MAX_RESTARTS    restarts allowed per non-converged retrieval (default 1).
 #   sbatch reads site options from its own environment variables, e.g. SBATCH_PARTITION,
 #   SBATCH_ACCOUNT, SBATCH_MAIL_USER and SBATCH_MAIL_TYPE.
 #
 # Stages (see PIPELINE.md for the full DAG and the source commit of each script):
 #   pre         camp2ex/s00-s09: Mie table, MISR and ERA5 preprocessing, RTE grid, aerosol, background
 #               scatterers, observations, cloud volume masks
-#   retrievals  camp2ex/s10 writes config.yml and run_at3d.sh for the 12 runs in job_list_V11.csv, then
-#               runs them; default and surf4p0 wait for their *_obsolete stage-1 runs
+#   retrievals  camp2ex/s10 writes config.yml and run_at3d.sh for the 10 runs in job_list_V11.csv, then
+#               runs them; a run that does not converge is restarted from its last iterate
+#               (camp2ex/run_until_converged.sh), and the first attempt kept as <run>_obsolete
 #   vc          src/veiledCore.py -> min_optical_path.nc in every V11 retrieval (Fig 7)
 #   synthetic   synthetic/: open and periodic HBC experiments for Figs 9 and 10
 #   b1          surface1D/figB1_shdom1d.py -> output1D/ (Fig B1)
@@ -156,17 +158,9 @@ if has_stage retrievals; then
     else
         (source $CONDA_BASE/bin/activate at3d_pure_k9 && python $C/s10_make_configs.py)
     fi
-    declare -A RET_ID
-    while IFS=, read -r out_path restart_iter _; do
+    while IFS=, read -r out_path _; do
         [ "$out_path" = out_path ] && continue
-        deps=$J_PRE
-        if [ "$restart_iter" != none ]; then
-            stage1=$(dirname "$(dirname "$restart_iter")")/
-            deps=$(join $deps ${RET_ID[$stage1]})
-            deps=${deps#,}
-        fi
-        submit_script "$OUT_ROOT/$out_path" "$deps" "$OUT_ROOT/${out_path}run_at3d.sh"
-        RET_ID[$out_path]=$JOB_ID
+        submit_script "$OUT_ROOT/$out_path" "$J_PRE" "$OUT_ROOT/${out_path}run_at3d.sh"
         J_RET+=($JOB_ID)
     done < $C/job_list_V11.csv
 fi
