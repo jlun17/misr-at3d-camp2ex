@@ -79,7 +79,11 @@ Login required) and checks them against `scripts/download/MISR.sha256`, the chec
 for the manuscript. `scripts/download/download_camp2ex.sh` downloads the three CAMP2Ex P-3B in situ files
 for Fig 7 (MetNav, FCDP, 2DS10) from the NASA Langley airborne science archive into
 `data/raw/CAMP2Ex_SPEC/` (no login needed) and checks them against `scripts/download/CAMP2Ex.sha256`.
-The ERA5 pressure-level and single-level data have no download script yet.
+`scripts/download/download_era5.py` downloads the two ERA5 files (single and pressure levels) into
+`data/raw/era5/` from the Copernicus Climate Data Store (CDS account and `pip install cdsapi` required).
+CDS files are not byte-identical between retrievals (the `history` attribute records the retrieval), so
+they are checked by content against `scripts/download/ERA5.fingerprints.json`, a SHA-256 of each
+variable's values.
 
 ## Stages
 
