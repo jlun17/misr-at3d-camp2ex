@@ -274,7 +274,7 @@ variable, dimension and attribute in every netCDF group.
 | All 29 figures, re-rendered after archiving and the path edits | pixel-identical to renders made before archiving |
 | `pre` stage with `--local`, and with `at3d_pure_k9` rebuilt from `envs/` | same results as above |
 | Fig 4 rendered with `vis2` rebuilt from `envs/` | pixel-identical |
-| Fresh `git clone` + data record + `download_camp2ex.sh` + `run_figures.sh` (2026-10-21) | all 120 data record files verified; all 29 figures pixel-identical |
+| Fresh `git clone` of `8b0ff78` from GitHub + data record + `download_camp2ex.sh` + `run_figures.sh` (2026-10-26) | all 144 data record files and the 3 CAMP2Ex files verified; all 29 figures pixel-identical |
 
 ## Archive
 
