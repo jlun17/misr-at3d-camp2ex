@@ -17,8 +17,7 @@ Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiomet
 - `PIPELINE.md` describes how every input file is rebuilt (`scripts/pipeline/run_pipeline.sh`). Unused code and
   data are in `archive/`, which mirrors the original paths.
 - **Cell convention:** `idx` is the 0-based cell position in the notebook JSON; `In[n]` is the saved
-  execution count. The "cell N" numbers in `CLAUDE.md` mostly match `In[n]` (hbc2 is the exception: they match
-  1-based positions there). The two notations are given side by side below.
+  execution count. The two notations are given side by side below.
 
 ## Summary
 

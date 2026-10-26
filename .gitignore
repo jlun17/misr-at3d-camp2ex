@@ -425,3 +425,7 @@ FodyWeavers.xsd
 
 # Checksum list unpacked with the data record (scripts/release/make_data_record.py)
 /DATA_RECORD.sha256
+
+# Claude Code project notes (local only)
+CLAUDE.md
+.claude/
