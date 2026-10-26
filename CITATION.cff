@@ -1,0 +1,52 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article in preferred-citation."
+type: software
+title: "Software for: The Practical Application of Atmospheric Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiometer"
+version: 1.0.0
+doi: 10.5281/zenodo.23677453
+date-released: 2026-10-26
+license: MIT
+repository-code: "https://github.com/jlun17/misr-at3d-camp2ex"
+authors:
+  - family-names: Lundstrom
+    given-names: John
+    orcid: "https://orcid.org/0000-0003-0815-2087"
+  - family-names: Di Girolamo
+    given-names: Larry
+    orcid: "https://orcid.org/0000-0003-1473-4884"
+  - family-names: Loveridge
+    given-names: Jesse
+    orcid: "https://orcid.org/0000-0002-7127-6907"
+keywords:
+  - MISR
+  - AT3D
+  - atmospheric tomography
+  - 3D radiative transfer
+  - CAMP2Ex
+references:
+  - type: data
+    title: "Data for: The Practical Application of Atmospheric Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiometer"
+    doi: 10.5281/zenodo.23677122
+    authors:
+      - family-names: Lundstrom
+        given-names: John
+      - family-names: Di Girolamo
+        given-names: Larry
+      - family-names: Loveridge
+        given-names: Jesse
+preferred-citation:
+  type: article
+  title: "The Practical Application of Atmospheric Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiometer"
+  journal: "Journal of Geophysical Research: Atmospheres"
+  year: 2026
+  status: submitted
+  authors:
+    - family-names: Lundstrom
+      given-names: John
+      orcid: "https://orcid.org/0000-0003-0815-2087"
+    - family-names: Di Girolamo
+      given-names: Larry
+      orcid: "https://orcid.org/0000-0003-1473-4884"
+    - family-names: Loveridge
+      given-names: Jesse
+      orcid: "https://orcid.org/0000-0002-7127-6907"
