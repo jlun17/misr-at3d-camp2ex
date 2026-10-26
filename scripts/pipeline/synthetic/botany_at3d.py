@@ -45,25 +45,27 @@ filename = os.path.splitext(infile)[0] + '_syntheticObs.nc'
 sensor_dict_obs, solver_dict_obs, rte_grid_obs = at3d.util.load_forward_model(filename)
 
 # Space carving
-spc_crv = indata['space_carve']
-sensor_list = []
-for i, sensor in enumerate(sensor_dict_obs[indata['sensors']['name']]['sensor_list']):
-    copied = sensor.copy(deep=True)
-    weights = np.zeros(sensor.sizes['nrays'])
-    ray_mask =np.zeros(sensor.sizes['nrays'], dtype=int)
-    ray_mask_pixel = np.zeros(sensor.npixels.size, dtype=int)
-    thresh = spc_crv['threshold'][i]
-    ray_mask_pixel[np.where(sensor.I.data > thresh)] = 1
-    copied['weights'] = ('nrays',sensor.I.data)
-    copied['cloud_mask'] = ('nrays', ray_mask_pixel[sensor.pixel_index.data])
-    sensor_list.append(copied)
-bcflag = 0
-if(solver_dict_obs[wavelen].numerical_params.x_boundary_condition.data == 'open'):
-    bcflag += 1
-if(solver_dict_obs[wavelen].numerical_params.y_boundary_condition.data == 'open'):
-    bcflag += 2
-space_carver = at3d.space_carve.SpaceCarver(rte_grid_obs, bcflag = bcflag)
-carved_volume = space_carver.carve(sensor_list, agreement=spc_crv['agreement'])
+# spc_crv = indata['space_carve']
+# sensor_list = []
+# for i, sensor in enumerate(sensor_dict_obs[indata['sensors']['name']]['sensor_list']):
+#     copied = sensor.copy(deep=True)
+#     weights = np.zeros(sensor.sizes['nrays'])
+#     ray_mask =np.zeros(sensor.sizes['nrays'], dtype=int)
+#     ray_mask_pixel = np.zeros(sensor.npixels.size, dtype=int)
+#     thresh = spc_crv['threshold'][i]
+#     ray_mask_pixel[np.where(sensor.I.data > thresh)] = 1
+#     copied['weights'] = ('nrays',sensor.I.data)
+#     copied['cloud_mask'] = ('nrays', ray_mask_pixel[sensor.pixel_index.data])
+#     sensor_list.append(copied)
+# bcflag = 0
+# if(solver_dict_obs[wavelen].numerical_params.x_boundary_condition.data == 'open'):
+#     bcflag += 1
+# if(solver_dict_obs[wavelen].numerical_params.y_boundary_condition.data == 'open'):
+#     bcflag += 2
+# space_carver = at3d.space_carve.SpaceCarver(rte_grid_obs, bcflag = bcflag)
+# carved_volume = space_carver.carve(sensor_list, agreement=spc_crv['agreement'])
+carved_volume = rte_grid_obs.copy(deep=True)
+carved_volume['mask'] = (['x','y','z'], np.ones((rte_grid_obs.x.shape[0], rte_grid_obs.y.shape[0], rte_grid_obs.z.shape[0])))
 carved_volume.mask[0] = carved_volume.mask[-1] = carved_volume.mask[:,0] = carved_volume.mask[:,-1] = carved_volume.mask[:,:,-1] = 0.0
 carved_volume.to_netcdf(os.path.splitext(infile)[0] + '_carvedVolume.nc')
 
