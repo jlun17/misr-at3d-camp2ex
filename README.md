@@ -24,7 +24,7 @@ The data record holds the processed files the figures read: the 10 V11 retrieval
 cloud volume masks, the synthetic HBC runs and the Fig B1 runs. No retrieval is rerun.
 
 ```bash
-git clone https://github.com/jlun17/Lundstrom2025.git && cd Lundstrom2025
+git clone https://github.com/jlun17/misr-at3d-camp2ex.git && cd misr-at3d-camp2ex
 envs/create_envs.sh vis2 vis2_clone                    # the two conda envs the figure scripts use
 tar -xzf /path/to/LundstromPub2025_data_record.tar.gz -C .   # unpacks into the repo root
 scripts/release/verify_data_record.sh                  # checks every file against DATA_RECORD.sha256

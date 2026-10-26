@@ -4,7 +4,7 @@ Source code and data behind each figure in *The Practical Application of Atmosph
 Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiometer*
 (Lundstrom et al. 2026).
 
-- Repository: https://github.com/jlun17/Lundstrom2025, branch `pub-prep`, traced at commit `a582cad`
+- Repository: https://github.com/jlun17/misr-at3d-camp2ex, branch `pub-prep`, traced at commit `a582cad`
   (2026-10-16). Paths below are relative to the repository root.
 - **Original locations.** The figures were made on the authors' cluster (Keeling, University of Illinois).
   Some notebook outputs and job records still show absolute paths there: `/data/keeling/a/johntl3/b/...`,
