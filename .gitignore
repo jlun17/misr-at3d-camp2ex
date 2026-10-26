@@ -13,6 +13,7 @@ experiments/
 *.mp4
 *.pptx
 *.npz
+*.tar.gz
 
 # Figures
 *.png
