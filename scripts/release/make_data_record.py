@@ -10,7 +10,8 @@ repository root) checks every file.
 Contents (paths relative to the repository root):
 - experiments/CAMP2Ex_RF17/V11/<run>/: for each retrieval the figure scripts load, the final iterate
   (iterations/iterNNN.nc, the only one src/Retrieval.py reads with iteration=-1), min_optical_path.nc
-  (Fig 7), and loss.csv and at3d.log as the record of convergence. config.yml and run_at3d.sh are in git.
+  (Fig 7), loss.csv and at3d.log as the record of convergence, and config.yml and run_at3d.sh as the
+  record of how each was run.
 - data/V11/: observations and cloud volume masks.
 - data/interim/: RTE grid, background scatterers, MISR extracts, and the Fig B1 observation file.
 - data/raw/MISR/MISR_AM1_ACP_MIXTURE_F06_0022.nc: converted from the raw HDF by pipeline step s01.
@@ -44,7 +45,7 @@ RETRIEVALS = [
     'CVM/unconstrained',
     'cloud_motion/ATM_unc', 'cloud_motion/ATP_unc', 'cloud_motion/CTM_unc', 'cloud_motion/CTP_unc',
 ]
-RETRIEVAL_FILES = ['min_optical_path.nc', 'loss.csv', 'at3d.log']
+RETRIEVAL_FILES = ['min_optical_path.nc', 'loss.csv', 'at3d.log', 'config.yml', 'run_at3d.sh']
 DIRECTORIES = [
     'data/V11',
     'data/interim',

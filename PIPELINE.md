@@ -201,7 +201,7 @@ pipeline.
 
 | Contents | Why |
 |---|---|
-| `experiments/CAMP2Ex_RF17/V11/<run>/`: the final `iterations/iterNNN.nc`, `min_optical_path.nc`, `loss.csv`, `at3d.log` for the 10 retrievals and the two `*_obsolete` first attempts | figures (`src/Retrieval.py` reads only the final iterate); the logs record convergence |
+| `experiments/CAMP2Ex_RF17/V11/<run>/`: the final `iterations/iterNNN.nc`, `min_optical_path.nc`, `loss.csv`, `at3d.log`, `config.yml`, `run_at3d.sh` for the 10 retrievals and the two `*_obsolete` first attempts | figures (`src/Retrieval.py` reads only the final iterate and `config.yml`); the logs record convergence and the job files how each run was made |
 | `data/V11/` | observations and cloud volume masks the retrievals and figures read |
 | `data/interim/`, `data/raw/MISR/MISR_AM1_ACP_MIXTURE_F06_0022.nc` | intermediate files, so retrievals can be rerun without the `pre` stage |
 | `mie_tables/red_mie_table.nc` | the Water Mie table the retrievals used (a rebuild differs at float32 rounding) |
@@ -209,9 +209,9 @@ pipeline.
 | `notebooks/surface_parameterization_testing/output1D/` | Fig B1 |
 
 Not included: the raw MISR, ERA5 and CAMP2Ex files that `scripts/download/` fetches, everything tracked
-in git (e.g. the retrievals' `config.yml`), the other iterates of each retrieval, and `archive/`.
+in git, the other iterates of each retrieval, and `archive/`.
 
-Size: 120 files, 1.12 GB unpacked, 166 MB compressed (2026-10-21).
+Size: 144 files, 1.12 GB unpacked, 166 MB compressed (2026-10-26).
 
 ## Deviations from the original runs
 
