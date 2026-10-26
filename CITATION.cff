@@ -30,10 +30,6 @@ references:
     authors:
       - family-names: Lundstrom
         given-names: John
-      - family-names: Di Girolamo
-        given-names: Larry
-      - family-names: Loveridge
-        given-names: Jesse
 preferred-citation:
   type: article
   title: "The Practical Application of Atmospheric Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiometer"
