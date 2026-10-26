@@ -112,3 +112,7 @@ the original files.
 | `configs/`, `automation/` | retrieval solver configs and the original V11 job lists |
 | `envs/` | conda environment lockfiles and `create_envs.sh` |
 | `archive/` | code and data that no figure or pipeline stage uses, kept at their original relative paths |
+
+## License
+
+The code is released under the MIT License (see `LICENSE`).

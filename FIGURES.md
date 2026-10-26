@@ -4,13 +4,16 @@ Source code and data behind each figure in *The Practical Application of Atmosph
 Tomography with 3D Radiative Transfer to the Multi-Angle Imaging SpectroRadiometer*
 (Lundstrom et al. 2026).
 
-- Repository: `LundstromPub2025`, branch `pub-prep`, traced at commit `a582cad` (2026-10-16).
-- Repo root: `/data/keeling/a/johntl3/b/LundstromPub2025`. In-repo paths below are relative to it.
-  `/data/keeling/a/johntl3/b` is the same directory as `/data/gdi/b/johntl3`, which is why notebook
-  output sometimes shows `/data/gdi/...` paths.
-- Synthetic experiments (Figs 8–10) were run in `/data/keeling/a/johntl3/b/Synthetic`, which is **not** under
-  version control. The files the figures read are copied to `data/synthetic/`, and the producer scripts to
-  `scripts/pipeline/synthetic/`.
+- Repository: https://github.com/jlun17/Lundstrom2025, branch `pub-prep`, traced at commit `a582cad`
+  (2026-10-16). Paths below are relative to the repository root.
+- **Original locations.** The figures were made on the authors' cluster (Keeling, University of Illinois).
+  Some notebook outputs and job records still show absolute paths there: `/data/keeling/a/johntl3/b/...`,
+  or the same directory mounted as `/data/gdi/b/johntl3/...`. These are original locations only; nothing in
+  the repository reads them.
+- **`Synthetic/`** below is a separate working directory on the same cluster, where the synthetic experiments
+  (Figs 8–10) were run. It is **not** under version control and is not published. The files the figures
+  read are copied to `data/synthetic/`, the producer scripts to `scripts/pipeline/synthetic/`, and the Fig 8
+  plotting code to `scripts/figures/fig08_clouds.py`.
 - `PIPELINE.md` describes how every input file is rebuilt (`scripts/pipeline/run_pipeline.sh`). Unused code and
   data are in `archive/`, which mirrors the original paths.
 - **Cell convention:** `idx` is the 0-based cell position in the notebook JSON; `In[n]` is the saved
@@ -232,7 +235,7 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
 
 ## Figure 8: Synthetic cloud field summary
 
-- **Notebook / cell:** `/data/keeling/a/johntl3/b/Synthetic/analysis/lundstrom2025_figures.ipynb`, idx 20 (In[11]).
+- **Notebook / cell:** `Synthetic/analysis/lundstrom2025_figures.ipynb` (not published), idx 20 (In[11]).
   The script reads the field from `data/synthetic/`.
   - Prerequisites: idx 0 (imports, `savefigs = True`), idx 1 (`set_labels`), idx 18 (`plot_square`),
     idx 19 (load).
@@ -243,10 +246,10 @@ Common to all runs: `a=2.86`, `b=6.14`, `error_cov_sf=1e7`.
   `Synthetic/cloud_gen/cloud_fields/TradeCu/density/field07.nc`), cropped to
   71×71 columns around the centre.
   - idx 19 also loads `.../Transition/len149/ex00_density.nc`, but this figure does not use it.
-- **Code:** `/data/keeling/a/johntl3/b/Synthetic/analysis/visualization.py` (imported as `vis`).
+- **Code:** `Synthetic/analysis/visualization.py` (imported as `vis` in the notebook).
   External: `xarray`, `at3d`.
-- **Output:** `/data/keeling/a/johntl3/b/Synthetic/analysis/lundstrom_et_al_MS_cloud_summaries.png`
-  (300 dpi).
+- **Output:** the notebook saved `Synthetic/analysis/lundstrom_et_al_MS_cloud_summaries.png` (300 dpi); the
+  script saves `figures/manuscript/fig08_clouds.png`.
 
 ## Figure 9: Synthetic HBC test, retrieval vs control
 

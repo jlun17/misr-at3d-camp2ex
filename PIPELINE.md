@@ -45,7 +45,8 @@ scripts/pipeline/run_pipeline.sh --out-root /path/to/build --local
 - Slurm job logs go to `<out-root>/logs/pipeline/`. Retrieval logs (`at3d.log`, `slurm-*.out`) go to each
   retrieval directory, as before.
 
-Approximate wall time on Keeling `node`:
+Approximate wall time on the `node` partition of Keeling, the University of Illinois cluster where the
+manuscript runs were made:
 - `pre`: under 30 min.
 - Each retrieval: 1.5–19 h per attempt; a restarted retrieval runs two attempts in the same job.
 - `vc`: about 1 h.
@@ -165,7 +166,8 @@ file the run actually restarted from. `run_until_converged.sh` writes the moved 
 
 ### `synthetic`: HBC experiments (Figs 9, 10)
 
-These are copied from `/data/keeling/a/johntl3/b/Synthetic`, which is not under version control. Paths
+These are copied from `Synthetic/`, a separate working directory on the authors' cluster that is not under
+version control and not published (see `FIGURES.md`). Paths
 now point to `data/synthetic/`, and only the TradeCumulus field is run. Domain sizes are len005, 007,
 009, 011, 015 and 019.
 
@@ -248,7 +250,7 @@ reproduce the published Figs S11 and S12.
 
 ## Verification
 
-Run on 2026-10-20 with `--out-root /data/gdi/b/johntl3/LundstromPub2025_pipeline_test --stages pre,b1`,
+Run on 2026-10-20 with `--out-root <scratch dir> --stages pre,b1`,
 comparing with `python scripts/pipeline/compare_outputs.py <out-root>`. That script compares every
 variable, dimension and attribute in every netCDF group.
 
